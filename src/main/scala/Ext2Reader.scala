@@ -4,7 +4,13 @@ object Ext2Reader {
 	def main(args: Array[String]) { 
 	  val file = new File(args(0))
 	  println("File: "+file.getAbsolutePath)
-	  val in = new FileInputStream(file)
+
+	  val bytes = readFile(file)
+
+	}
+
+	def readFile(file : File) : Bytes = {
+		val in = new FileInputStream(file)
 	  
 	  val bytes = new Array[Byte](file.length.toInt)
 	  
@@ -20,9 +26,12 @@ object Ext2Reader {
 
     println(" done.")
 
+    in.close
+
     print("Converting file data...")
     val contents = new Bytes(bytes.map{_.toChar})
     println(" done.")
-    
+
+    contents
 	}
 }
