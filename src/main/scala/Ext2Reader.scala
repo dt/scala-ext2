@@ -1,37 +1,30 @@
-import java.io._
+import java.io.File
+/*
+  Some inspiration taken from jNode's EXT2 implementation
+  http://gitorious.org/jnode/svn-mirror/trees/master/fs/src/fs/org/jnode/fs/ext2
+*/
 
 object Ext2Reader { 
 	def main(args: Array[String]) { 
 	  val file = new File(args(0))
 	  println("File: "+file.getAbsolutePath)
 
-	  val bytes = readFile(file)
+	  val bytes = Bytes.readFromFile(file)
 
-	}
+	  val sb = Superblock.loadFrom(bytes)
 
-	def readFile(file : File) : Bytes = {
-		val in = new FileInputStream(file)
+	  for(i <- 1024 to 2200 ) {
+	  	print(i - 1024)
+	  	print("\t")
+	  	print("0x" + Hex.valueOf(bytes.get1(i)) )
+	  	print("\t")
+	  	println( bytes.get1(i) )
+	  }
 	  
-	  val bytes = new Array[Byte](file.length.toInt)
-	  
-    var position = 0
-    var bytesRead = 0
 
-    print("Reading file...")
+	  println("Magic num: "+Hex.valueOf(sb.magicNum))
+	  println("Log Block Size: "+sb.logBlockSize)
+	  println("Block Size: "+sb.blockSize)
 
-    while (position < file.length && bytesRead >= 0) {
-      bytesRead = in.read(bytes, position, bytes.length-position )
-      position += bytesRead
-    }
-
-    println(" done.")
-
-    in.close
-
-    print("Converting file data...")
-    val contents = new Bytes(bytes.map{_.toChar})
-    println(" done.")
-
-    contents
 	}
 }
