@@ -1,0 +1,11 @@
+target/
+lib_managed/
+src_managed/
+project/boot/
+.project
+build/
+build.xml
+.scala_dependencies
+.classpath
+nbproject
+manifest.mf
