@@ -1,0 +1,41 @@
+dltaylor@meerkat:~$ /usr/local/Cellar/e2fsprogs/1.41.12/sbin/tune2fs -l Downloads/ext3fs.dd 
+tune2fs 1.41.12 (17-May-2010)
+Filesystem volume name:   <none>
+Last mounted on:          <not available>
+Filesystem UUID:          9ddd7ff7-3b70-4fbd-bc84-acd7afc4e963
+Filesystem magic number:  0xEF53
+Filesystem revision #:    1 (dynamic)
+Filesystem features:      has_journal resize_inode dir_index filetype sparse_super
+Default mount options:    (none)
+Filesystem state:         clean
+Errors behavior:          Continue
+Filesystem OS type:       Linux
+Inode count:              19200
+Block count:              76800
+Reserved block count:     3840
+Free blocks:              61966
+Free inodes:              18992
+First block:              1
+Block size:               1024
+Fragment size:            1024
+Reserved GDT blocks:      256
+Blocks per group:         8192
+Fragments per group:      8192
+Inodes per group:         1920
+Inode blocks per group:   240
+Filesystem created:       Tue Feb 15 00:28:05 2011
+Last mount time:          Tue Feb 15 00:28:15 2011
+Last write time:          Tue Feb 15 00:47:12 2011
+Mount count:              1
+Maximum mount count:      21
+Last checked:             Tue Feb 15 00:28:05 2011
+Check interval:           15552000 (6 months)
+Next check after:         Sun Aug 14 01:28:05 2011
+Reserved blocks uid:      0 (user root)
+Reserved blocks gid:      0 (group wheel)
+First inode:              11
+Inode size:               128
+Journal inode:            8
+Default directory hash:   tea
+Directory Hash Seed:      43f63558-2462-4667-b20e-2a886f17cb0c
+Journal backup:           inode blocks
