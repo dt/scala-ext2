@@ -1,17 +1,16 @@
 object Directory {
-	def findRootdir : Option[Int] = {
+	def findRootdir(bytes : Bytes) : Option[Int] = {
 		var i = 0
-		while(i < bytes.length - length) {
-			val d = new Directory( bytes.getRange( i, length ) )
+		while(i < bytes.length - 8) {
+			val d = new Directory( bytes.getRange( i, bytes.get2(i+4) ) )
 			if ( isRootdir(d) )
 				return Some(i)
 			i += 1
 		}
 		None
 	}
-
 	def isRootdir(dir : Directory) = {
-		
+		false	
 	}
 }
 
