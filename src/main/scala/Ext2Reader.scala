@@ -6,25 +6,35 @@ import java.io.File
 
 object Ext2Reader { 
 	def main(args: Array[String]) { 
-	  val file = new File(args(0))
-	  println("File: "+file.getAbsolutePath)
+	  val image = new File(args(0))
+	  println("File: "+image.getAbsolutePath)
 
-	  val bytes = Bytes.readFromFile(file)
-
-	  val sb = Superblock.loadFrom(bytes)
-
-	  for(i <- 1024 to 2200 ) {
-	  	print(i - 1024)
-	  	print("\t")
-	  	print("0x" + Hex.valueOf(bytes.get1(i)) )
-	  	print("\t")
-	  	println( bytes.get1(i) )
-	  }
+	  val bytes = Bytes fromFile image
 	  
+		val searchForSuperblocks = false
+		val searchForRootdir = true
 
-	  println("Magic num: "+Hex.valueOf(sb.magicNum))
-	  println("Log Block Size: "+sb.logBlockSize)
-	  println("Block Size: "+sb.blockSize)
+	  if(searchForSuperblocks) {
+			println("Searching for superblocks...")	  
+		  var validSBs = Superblock findAllPossible bytes
+
+		  println("Possible SBs: "+validSBs)
+		  for( (i, score) <- validSBs.sortBy( t => t._2 ) ) {
+		  	println("Possible Superblock ("+score+") at "+i)
+		  	val sb = Superblock.loadFrom(bytes, i) 
+		  			println("\tLocation: "+sb.bytes.trueOffset)
+		  			println("\tMagic num: "+Hex.valueOf(sb.magicNum))
+		 		 		println("\tLooks valid: "+sb.looksValid)
+		  			println("\tLog Block Size: "+sb.logBlockSize)
+		  			println("\tBlock Size: "+sb.blockSize)
+		  			println("\tFirst Block: "+sb.firstBlock)
+				
+			}
+		}
+
+		if(searchForRootdir) {
+			
+		}
 
 	}
 }

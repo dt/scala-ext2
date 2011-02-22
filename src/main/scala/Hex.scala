@@ -4,4 +4,5 @@ object Hex {
   def valueOf(i:Int):String = "%02X" format i
   def valueOf(i:Char):String = "%02X" format i
   def valueOf(i:Byte):String = "%02X" format i
+  def valueOf(i:Long):String = "%02X" format i
 }
