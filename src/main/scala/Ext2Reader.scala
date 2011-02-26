@@ -32,9 +32,9 @@ object Ext2Reader {
 			}
 		}
 
-		if(searchForRootdir) {
-			
-		}
+		//println( Directory.findRootdir(bytes) )
+		Directory.scanAndBuildTree(bytes)
+		
 
 	}
 }

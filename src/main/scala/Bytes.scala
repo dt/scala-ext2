@@ -4,12 +4,15 @@ trait Bytes {
 	def get4(offset : Int ) : Long
 	def get2(offset : Int ) : Int
 	def get1(offset : Int ) : Char
+	def get1Int(offset : Int ) : Int
 
   def length : Int
 
   def trueOffset : Int
 
 	def getRange(base : Int, length : Int) : Bytes
+	
+	def getFrom(base : Int) : Bytes
 }
 
 object Bytes {
@@ -56,7 +59,12 @@ class BytesWrapper( val data : Array[Char] ) extends Bytes {
   def get1 ( offset : Int ) : Char =
     lim( data(offset) )
 
+  def get1Int( offset : Int) : Int = (get1(offset) & 0x00FF).asInstanceOf[Int]
+
   def getRange(base : Int, length : Int) = new ByteRange(this, base, length)
+
+  def getFrom(base : Int) = new BytesWithOffet( this, base )
+
 
   def lim(b : Char) : Char = (b & 0xFF).toChar
 
@@ -73,8 +81,28 @@ class BytesWrapper( val data : Array[Char] ) extends Bytes {
   	((b1 << 24) | (b2 << 16) | (b3 << 8) | b4) & 0xFFFFFFFFL
 }
 
+class BytesWithOffet( val data: Bytes, base : Int) extends Bytes {
+
+	def length = data.length - base
+
+	def trueOffset = base + data.trueOffset
+
+	def get4( offset : Int )  = data.get4(offset + base)
+
+	def get2( offset : Int ) = data.get2(offset + base )
+
+  def get1( offset : Int ) = data.get1(offset + base )
+
+  def get1Int( offset : Int ) = data.get1( offset + base )
+
+  def getRange(newBase : Int, newLength : Int) = new ByteRange(data, base + newBase, newLength)
+
+  def getFrom(newBase : Int) = new BytesWithOffet( data, base+newBase )
+
+}
+
 class ByteRange (val data : Bytes, base : Int, count : Int ) extends Bytes {
-	def length = count
+ 	def length = count
 
 	def trueOffset = base + data.trueOffset
 
@@ -84,10 +112,14 @@ class ByteRange (val data : Bytes, base : Int, count : Int ) extends Bytes {
 
   def get1( offset : Int ) = data.get1(check(offset + base ))
 
+  def get1Int( offset : Int ) = data.get1( check( offset + base )) 
+
   def getRange(newBase : Int, newLength : Int) = new ByteRange(data, base + newBase, newLength)
 
+  def getFrom(newBase : Int) = new BytesWithOffet( data, base+newBase )
+
 	def check( pos : Int ) = {
-		if(pos >= (base + length)) throw new IndexOutOfBoundsException()
+		if(pos >= (base + length)) throw new IndexOutOfBoundsException(pos + " >= ("+base+" + "+length+")")
 		pos
 	}
-} 
+}
