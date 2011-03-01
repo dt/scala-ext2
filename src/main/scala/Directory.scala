@@ -4,6 +4,7 @@ object Directory {
 		scanForDirs(bytes, i => {
 			val dir = new DirRec( bytes.getFrom( i ) )
 			println(dir)
+			
 			false
 		})
 	}
@@ -37,6 +38,18 @@ object Directory {
 		None
 	}
 }
+
+class Directory(val name : String, val parent : Directory, val inode : Inode) {
+	var subdirs = List[Directory]()
+	var files = List[File]()
+
+
+}
+
+class RootDirectory extends Directory("/", null, 2) {
+	override def parent = this
+}
+
 
 object DirRec {
 	val max_length = (0xFF + 8) // 4 + 2 + 1 + 1 + max(nameLength) 

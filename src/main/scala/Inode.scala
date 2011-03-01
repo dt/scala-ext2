@@ -1,0 +1,1 @@
+case class Inode(number : Int) 
