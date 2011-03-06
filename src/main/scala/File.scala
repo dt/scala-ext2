@@ -1,3 +1,3 @@
-class File(val name : String) {
+class FsFile(val name : String) {
 	
 }

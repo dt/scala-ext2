@@ -4,7 +4,8 @@ trait Bytes {
 	def get4(offset : Int ) : Long
 	def get2(offset : Int ) : Int
 	def get1(offset : Int ) : Char
-	def get1Int(offset : Int ) : Int
+
+  def get1Int(offset : Int ) : Int
 
   def length : Int
 

@@ -32,8 +32,8 @@ object Ext2Reader {
 			}
 		}
 
-		//println( Directory.findRootdir(bytes) )
-		Directory.scanAndBuildTree(bytes)
+		println( Directory.findRootdir(bytes) )
+		// Directory.scanAndBuildTree(bytes)
 		
 
 	}
