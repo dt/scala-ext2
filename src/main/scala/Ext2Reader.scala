@@ -6,11 +6,10 @@ import java.io.File
 
 object Ext2Reader { 
 	def main(args: Array[String]) { 
-	  val image = new File(args(0))
-	  println("File: "+image.getAbsolutePath)
-
-	  val bytes = Bytes fromFile image
-	  
+		val image = new File(args(0))
+		println("File: "+image.getAbsolutePath)
+		val bytes = Bytes fromFile image
+		val fs = new Ext2Fs(bytes)
 		val searchForSuperblocks = false
 		val searchForRootdir = true
 
@@ -32,7 +31,30 @@ object Ext2Reader {
 			}
 		}
 
-		println( Directory.findRootdir(bytes) )
+		println("Searching for root directory listing...")
+		val root = Directory.findRootdir(fs)
+		println("")
+
+		root.map { contents =>
+			println( "Found a root directory listing at "+Hex.valueOf(contents) )
+			println( "Scanning for an inode which points to this listing...")
+			val i2 = Inode.findByFirstBlockAddr(fs, contents, _ => false)
+
+			i2 match {
+				case Some(i) => {
+					println("Found: "+Hex.valueOf(i.bytes.trueOffset))
+					println("\t"+i)
+					println("\t\tblocks:"+i.blocks)
+				}
+				case None => println("Could not find a matching node.")
+			}
+		}
+
+		val inodes = Inode.findAllBy(fs, x => x.looksLikeDir && x.size == 4096 && x.size <= x.blockCount * 512)
+		inodes.map{ x => println(Hex.valueOf(x.bytes.trueOffset)+"\t"+x)}
+
+		
+
 		// Directory.scanAndBuildTree(bytes)
 		
 

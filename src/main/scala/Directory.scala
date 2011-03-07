@@ -9,14 +9,15 @@ object Directory {
 		})
 	}
 
-	def findRootdir(bytes : Bytes) : Option[Int] = {
+	def findRootdir(fs : FileSystem) : Option[Int] = {
+		val bytes = fs.bytes
 		scanForDirs(bytes, i => {
 			val d1 = new DirRec( bytes.getFrom( i ) )
 			val d2 = new DirRec( bytes.getFrom( i+d1.length ) )
 			println("\t "+ d1 )
 
 			var offset = d1.length
-			for (d<- 1 to 6) {
+			for (d<- 1 to 10) {
 					val dir = new DirRec( bytes.getFrom( i+offset ) )
 					offset += dir.length
 					println("\t "+ dir )
@@ -76,7 +77,7 @@ class DirRec(bytes : Bytes) {
 	}
 
 	override def toString = {
-		Hex.valueOf(bytes.trueOffset) +"\t\tinode: "+inode +"\tlen: "+length + "\ttype: " +ftype+ "\tname("+nameLength + "): "+name
+		Hex.valueOf(bytes.trueOffset) +"\t\tinode: "+inode +"\tlen: "+length + "\ttype: " +ftype+ "\tname("+nameLength + "): '"+name+"'"
 	}
 
 }
