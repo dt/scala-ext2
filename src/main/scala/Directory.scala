@@ -1,3 +1,5 @@
+package extreader
+
 object Directory {
 
 	def scanAndBuildTree(bytes:Bytes) = {
@@ -77,7 +79,7 @@ class DirRec(bytes : Bytes) {
 	}
 
 	override def toString = {
-		Hex.valueOf(bytes.trueOffset) +"\t\tinode: "+inode +"\tlen: "+length + "\ttype: " +ftype+ "\tname("+nameLength + "): '"+name+"'"
+		hex(bytes.trueOffset) +"\t\tinode: "+inode +"\tlen: "+length + "\ttype: " +ftype+ "\tname("+nameLength + "): '"+name+"'"
 	}
 
 }

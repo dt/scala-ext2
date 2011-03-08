@@ -1,3 +1,4 @@
+package extreader
 
 object Superblock {
 	val length = 1024

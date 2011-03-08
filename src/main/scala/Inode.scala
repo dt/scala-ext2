@@ -1,3 +1,5 @@
+package extreader
+
 /**
 *	Offset (bytes)	Size (bytes)	Description
 *	0	2	i_mode
@@ -144,6 +146,5 @@ class Inode(val fs : FileSystem, val bytes: Bytes) {
 
 	def looksLikeDir = format==Constants.EXT2_S_IFDIR
 
-	override def toString = "format: "+Hex.valueOf(format)+"\towner: "+owner+"\tperms: "+Hex.valueOf(umask
-		)+"\tsize: "+size+"\tlinks: "+linkCount +"\tblocks: "+blockCount
+	override def toString = "format: "+hex(format)+"\towner: "+owner+"\tperms: "+hex(umask)+"\tsize: "+size+"\tlinks: "+linkCount +"\tblocks: "+blockCount
 }

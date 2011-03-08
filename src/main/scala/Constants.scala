@@ -1,3 +1,5 @@
+package extreader
+
 /*
 copied from jnode's ext2 impl
 */

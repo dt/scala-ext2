@@ -1,3 +1,5 @@
+package extreader
+
 import java.io.File
 /*
   Some inspiration taken from jNode's EXT2 implementation
@@ -10,24 +12,30 @@ object Ext2Reader {
 		println("File: "+image.getAbsolutePath)
 		val bytes = Bytes fromFile image
 		val fs = new Ext2Fs(bytes)
+
+
 		val searchForSuperblocks = false
 		val searchForRootdir = true
 
-	  if(searchForSuperblocks) {
-			println("Searching for superblocks...")	  
-		  var validSBs = Superblock findAllPossible bytes
-
-		  println("Possible SBs: "+validSBs)
-		  for( (i, score) <- validSBs.sortBy( t => t._2 ) ) {
-		  	println("Possible Superblock ("+score+") at "+i)
-		  	val sb = Superblock.loadFrom(bytes, i) 
-		  			println("\tLocation: "+sb.bytes.trueOffset)
-		  			println("\tMagic num: "+Hex.valueOf(sb.magicNum))
-		 		 		println("\tLooks valid: "+sb.looksValid)
-		  			println("\tLog Block Size: "+sb.logBlockSize)
-		  			println("\tBlock Size: "+sb.blockSize)
-		  			println("\tFirst Block: "+sb.firstBlock)
+		if (fs hasValidSuperblock) {
 				
+		} else {
+		  if(searchForSuperblocks) {
+				println("Searching for superblocks...")	  
+			  var validSBs = Superblock findAllPossible bytes
+
+			  println("Possible SBs: "+validSBs)
+			  for( (i, score) <- validSBs.sortBy( t => t._2 ) ) {
+			  	println("Possible Superblock ("+score+") at "+i)
+			  	val sb = Superblock.loadFrom(bytes, i) 
+			  			println("\tLocation: "+sb.bytes.trueOffset)
+			  			println("\tMagic num: "+hex(sb.magicNum))
+			 		 		println("\tLooks valid: "+sb.looksValid)
+			  			println("\tLog Block Size: "+sb.logBlockSize)
+			  			println("\tBlock Size: "+sb.blockSize)
+			  			println("\tFirst Block: "+sb.firstBlock)
+					
+				}
 			}
 		}
 
@@ -36,13 +44,13 @@ object Ext2Reader {
 		println("")
 
 		root.map { contents =>
-			println( "Found a root directory listing at "+Hex.valueOf(contents) )
+			println( "Found a root directory listing at "+hex(contents) )
 			println( "Scanning for an inode which points to this listing...")
 			val i2 = Inode.findByFirstBlockAddr(fs, contents, _ => false)
 
 			i2 match {
 				case Some(i) => {
-					println("Found: "+Hex.valueOf(i.bytes.trueOffset))
+					println("Found: "+hex(i.bytes.trueOffset))
 					println("\t"+i)
 					println("\t\tblocks:"+i.blocks)
 				}
@@ -51,7 +59,7 @@ object Ext2Reader {
 		}
 
 		val inodes = Inode.findAllBy(fs, x => x.looksLikeDir && x.size == 4096 && x.size <= x.blockCount * 512)
-		inodes.map{ x => println(Hex.valueOf(x.bytes.trueOffset)+"\t"+x)}
+		inodes.map{ x => println(hex(x.bytes.trueOffset)+"\t"+x)}
 
 		
 

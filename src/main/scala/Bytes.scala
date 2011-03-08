@@ -1,3 +1,5 @@
+package extreader
+
 import java.io.{FileInputStream, File}
 
 trait Bytes {
@@ -17,7 +19,7 @@ trait Bytes {
 }
 
 object Bytes {
-	def apply(data: Array[Char]) = new BytesWrapper(data)
+	def apply(data: Array[Char]) = new ByteArrayWrapper(data)
 
 	def fromFile(file : File) : Bytes = {
 		val in = new FileInputStream(file)
@@ -39,14 +41,14 @@ object Bytes {
     in.close
 
     print("Converting file data...")
-    val contents = new BytesWrapper(bytes.map{ b => ( b & 0xFF).toChar })
+    val contents = new ByteArrayWrapper(bytes.map{ b => ( b & 0xFF).toChar })
     println(" done.")
 
     contents
 	}
 }
 
-class BytesWrapper( val data : Array[Char] ) extends Bytes {
+class ByteArrayWrapper( val data : Array[Char] ) extends Bytes {
 	def trueOffset = 0
 
 	def length = data.length
@@ -80,6 +82,24 @@ class BytesWrapper( val data : Array[Char] ) extends Bytes {
 
   def concat4( b1 : Char, b2 : Char, b3 : Char, b4 : Char) : Long =
   	((b1 << 24) | (b2 << 16) | (b3 << 8) | b4) & 0xFFFFFFFFL
+}
+
+class BytesWrapper(val data: Bytes) {
+  def length = data.length
+
+  def trueOffset = data.trueOffset
+
+  def get4( offset : Int )  = data.get4(offset)
+
+  def get2( offset : Int ) = data.get2(offset)
+
+  def get1( offset : Int ) = data.get1(offset)
+
+  def get1Int( offset : Int ) = data.get1( offset )
+
+  def getRange(newBase : Int, newLength : Int) = new ByteRange(data, newBase, newLength)
+
+  def getFrom(newBase : Int) = new BytesWithOffet( data, newBase )
 }
 
 class BytesWithOffet( val data: Bytes, base : Int) extends Bytes {
