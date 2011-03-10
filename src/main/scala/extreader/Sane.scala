@@ -1,0 +1,5 @@
+package extreader
+
+object Sane {
+
+}
