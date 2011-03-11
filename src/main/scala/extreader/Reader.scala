@@ -11,7 +11,7 @@ object Reader {
 		val image = new File(args(0))
 		println("File: "+image.getAbsolutePath)
 		val bytes = Bytes fromFile image
-		val cleanBytes = Bytes fromFile (new File("clean2.dd"))
+		val cleanBytes = Bytes fromFile (new File("clean256.dd"))
 
 		val fs = new Ext2Fs(bytes, Some(cleanBytes))
 
