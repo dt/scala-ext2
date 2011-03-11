@@ -1,5 +1,0 @@
-package extreader
-
-object Sane {
-
-}
