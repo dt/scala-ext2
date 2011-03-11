@@ -53,13 +53,15 @@ class Group(fs: FileSystem, val num: Long, desc: GroupDesc) {
 	def inodeBytes(inodeIndexInGroup: Long): Bytes = {
 		println("[Group]\tLocation of "+inodeIndexInGroup+" inode in group "+num+"...")
 		val blockOffset = inodeIndexInGroup / fs.inodesPerBlock
-		println("[Group]\t\tIn the "+blockOffset+" block of group...")
-		val inodeIndexInBlock = (inodeIndexInGroup % fs.inodesPerBlock)
-		println("[Group]\t\tThe "+inodeIndexInBlock+" inode of that block...")
-		val offsetInBlock = inodeIndexInBlock * fs.inodeSize
-		println("[Group]\t\tThus "+offsetInBlock+" bytes into block "+blockOffset+"...")
+		val blockNum = inodeTableFirstBlock + blockOffset
 
-		println("[Group]\t\tFirst block of inodes is "+inodeTableFirstBlock)
-		fs.block(inodeTableFirstBlock + blockOffset).getRange(offsetInBlock, fs.inodeSize)
+		println("[Group]\t\tIn the "+blockOffset+"th block of inodes in group (block "+blockNum+")...")
+
+		val inodeIndexInBlock = (inodeIndexInGroup % fs.inodesPerBlock)
+		println("[Group]\t\tThe "+inodeIndexInBlock+" inode of block "+blockNum+"...")
+		val offsetInBlock = inodeIndexInBlock * fs.inodeSize 
+		println("[Group]\t\tThus 0x"+hex(offsetInBlock)+" bytes into block "+blockNum+"...")
+
+		fs.block(blockNum).getRange(offsetInBlock, fs.inodeSize)
 	}
 }

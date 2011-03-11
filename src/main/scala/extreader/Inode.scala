@@ -228,7 +228,7 @@ class Inode(val fs : FileSystem, val num: Long, val bytes: Bytes) {
 
 	def looksLikeDir = format==Constants.EXT2_S_IFDIR
 
-	override def toString = "["+hex(bytes.trueOffset)+"]\tformat: "+hex(format)+"\towner: "+owner+"\tperms: "+hex(umask)+"\tsize: "+size+"\tlinks: "+linkCount +"\tblocks: "+blockCount
+	override def toString = "["+(bytes.trueOffset)+"]\tformat: "+hex(format)+"\towner: "+owner+"\tperms: "+hex(umask)+"\tsize: "+size+"\tlinks: "+linkCount +"\tblocks: "+blockCount
 }
 
 
