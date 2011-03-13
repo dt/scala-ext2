@@ -2,7 +2,6 @@ package extreader
 
 
 object Inode {
-	val size = 128
 
 	def findAllBy( fs: FileSystem, test: Inode => Boolean) = {
 		var i = 0

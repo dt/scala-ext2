@@ -12,7 +12,7 @@ class FileSystem(val bytes: Bytes, val overrides: Map[String, Long], val clean:O
 
 	var blockSizeExpo = 0
 
-	var blocksPerGroup = 8192
+	var blocksPerGroup = 8192 // 8 * blockSize
 
 
 	var inodesPerGroup = 1832 // ext3: 1920
@@ -27,7 +27,8 @@ class FileSystem(val bytes: Bytes, val overrides: Map[String, Long], val clean:O
 	val groups = blockCount / blocksPerGroup
 
 	def blockSize = 1024 << blockSizeExpo
-	val inodeSize = 128
+
+	var inodeSize = 128
 
 	val inodesPerBlock = blockSize / inodeSize
 
