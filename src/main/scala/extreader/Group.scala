@@ -3,7 +3,7 @@ package extreader
 class GroupDescTable(val bytes : Bytes) {
 	def apply(groupNum: Long) = {
 		val offset = (groupNum * GroupDesc.size)
-		println("[GDT] GD "+groupNum+" at "+offset +" ("+ (bytes.trueOffset + offset) +")") 
+		debug("[GDT] GD "+groupNum+" at "+offset +" ("+ (bytes.trueOffset + offset) +")") 
 		new GroupDesc( bytes.getRange( offset, GroupDesc.size ))
 	}
 	
@@ -34,12 +34,12 @@ class GroupDesc(val bytes: Bytes) {
 	val freeBlocks = bytes.get2(12)		//bg_free_blocks_count
 	val freeInodes = bytes.get2(14)		//bg_free_inodes_count
 
-	println("[GD]\tLoading desc...")
-	println("[GD]\t\t blockBitmapBlock:\t"+blockBitmapBlock )
-	println("[GD]\t\t inodeBitmapBlock:\t"+ inodeBitmapBlock)
-	println("[GD]\t\t inodeTableFirstBlock:\t"+inodeTableFirstBlock )
-	println("[GD]\t\t freeBlocks:\t"+ freeBlocks)
-	println("[GD]\t\t freeInodes:\t"+ freeInodes)
+	debug("[GD]\tLoading desc...")
+	debug("[GD]\t\t blockBitmapBlock:\t"+blockBitmapBlock )
+	debug("[GD]\t\t inodeBitmapBlock:\t"+ inodeBitmapBlock)
+	debug("[GD]\t\t inodeTableFirstBlock:\t"+inodeTableFirstBlock )
+	debug("[GD]\t\t freeBlocks:\t"+ freeBlocks)
+	debug("[GD]\t\t freeInodes:\t"+ freeInodes)
 
 }
 
@@ -51,16 +51,16 @@ class Group(fs: FileSystem, val num: Long, desc: GroupDesc) {
 	def freeInodes = desc.freeInodes
 
 	def inodeBytes(inodeIndexInGroup: Long): Bytes = {
-		println("[Group]\tLocation of "+inodeIndexInGroup+" inode in group "+num+"...")
+		debug("[Group]\tLocation of "+inodeIndexInGroup+" inode in group "+num+"...")
 		val blockOffset = inodeIndexInGroup / fs.inodesPerBlock
 		val blockNum = inodeTableFirstBlock + blockOffset
 
-		println("[Group]\t\tIn the "+blockOffset+"th block of inodes in group (block "+blockNum+")...")
+		debug("[Group]\t\tIn the "+blockOffset+"th block of inodes in group (block "+blockNum+")...")
 
 		val inodeIndexInBlock = (inodeIndexInGroup % fs.inodesPerBlock)
-		println("[Group]\t\tThe "+inodeIndexInBlock+" inode of block "+blockNum+"...")
+		debug("[Group]\t\tThe "+inodeIndexInBlock+" inode of block "+blockNum+"...")
 		val offsetInBlock = inodeIndexInBlock * fs.inodeSize 
-		println("[Group]\t\tThus 0x"+hex(offsetInBlock)+" bytes into block "+blockNum+"...")
+		debug("[Group]\t\tThus 0x"+hex(offsetInBlock)+" bytes into block "+blockNum+"...")
 
 		fs.block(blockNum).getRange(offsetInBlock, fs.inodeSize)
 	}

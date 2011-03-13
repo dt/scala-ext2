@@ -9,10 +9,10 @@ object Superblock {
 		if (first looksValid) {
 			first
 		} else {
-			println("Could not load first superblock...")
+			debug("Could not load first superblock...")
 			findValid(bytes, firstPos + size) match {
 				case Some(i) => {
-					println("Found a valid superblock at "+i)
+					debug("Found a valid superblock at "+i)
 					loadFrom(bytes, i)
 				}
 				case None => throw new RuntimeException("Cannot find a valid superblock")
@@ -32,7 +32,7 @@ object Superblock {
   	while( sb isDefined ) {
   		i = sb.get._1
   		val score = sb.get._2
-  		//println("\tpossible superblock at "+i)
+  		//debug("\tpossible superblock at "+i)
   		results = (i, score) :: results
   		sb = findPossible( bytes, i+1 )
   	}

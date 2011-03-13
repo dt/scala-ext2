@@ -12,8 +12,8 @@ object Reader {
 		println("File: "+image.getAbsolutePath)
 		val bytes = Bytes fromFile image
 		val cleanBytes = Bytes fromFile (new File("clean256.dd"))
-
-		val fs = new Ext2Fs(bytes, Some(cleanBytes))
+		val overrides = Map[String,Long]()
+		val fs = new Ext2Fs(bytes, overrides, Some(cleanBytes))
 
 
 		val searchForSuperblocks = false

@@ -5,7 +5,7 @@ object DirectoryFinder {
 	def scanAndBuildTree(bytes:Bytes) = {
 		scanForDirs(bytes, i => {
 			val dir = new DirRec( bytes.getFrom( i ) )
-			println(dir)
+			debug(dir)
 			
 			false
 		})
@@ -16,13 +16,13 @@ object DirectoryFinder {
 		scanForDirs(bytes, i => {
 			val d1 = new DirRec( bytes.getFrom( i ) )
 			val d2 = new DirRec( bytes.getFrom( i+d1.length ) )
-			println("\t "+ d1 )
+			debug("\t "+ d1 )
 
 			var offset = d1.length
 			for (d<- 1 to 10) {
 					val dir = new DirRec( bytes.getFrom( i+offset ) )
 					offset += dir.length
-					println("\t "+ dir )
+					debug("\t "+ dir )
 				}
 				(d1.nameIsDot && d2.nameIsDotDot)
 			})
@@ -44,23 +44,24 @@ object DirectoryFinder {
 
 object Directory {
 	def apply(inode: Inode, name: String) = {
-		println("loading directory: "+name)
+		debug("loading directory: "+name)
 		val dir = new Directory(inode, name)
-		println(inode)
+		debug(inode)
 		var valid = true
 
 		for( block <- inode.blocks ) {
-			println("[dir]\tscanning "+block)
+			debug("[dir]\tscanning "+block)
 			if(valid) {
 				var i = 0
 				while(valid && i < block.length - DirRec.minLength) {
 					val rec = new DirRec( block.getFrom(i) )
 					
-					println(rec)
+					debug("[dir]\t"+rec)
 
-					if(rec.length == 0)
+					if(rec.length == 0) {
 						valid = false
-					else
+						debug("[dir]\tlast record")
+					} else
 						i = i + rec.length
 				}
 			}

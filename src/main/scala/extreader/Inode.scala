@@ -29,7 +29,7 @@ object Inode {
 			if( fs.bytes.get4(i) == num ) {
 				val inode = fs.fakeInodeAt(i-Inode.firstBlock)
 				
-				if(inode looksLikeDir) println(inode)
+				if(inode looksLikeDir) debug(inode)
 				
 				if(test(inode))
 					res = Some(inode)
@@ -78,6 +78,9 @@ class Inode(val fs : FileSystem, val num: Long, val bytes: Bytes) {
 	def linkCount = bytes.get2(26)
 	def halfKBlockCount = bytes.get4(28)
 
+	def isFile = format == Constants.EXT2_FT_REG_FILE
+	def isDir = format == Constants.EXT2_FT_DIR
+
 	def blockCount = halfKBlockCount /^ (2<<fs.blockSizeExpo)
 
 	val indirectsPerBlock = fs.intsPerBlock
@@ -88,25 +91,25 @@ class Inode(val fs : FileSystem, val num: Long, val bytes: Bytes) {
 	def numberOfBlock(localBlockIndex: Int): BlockNum = {
 		
 		if( localBlockIndex < 12) { // blocks 0 - 11
-			println("[inode]\tblock "+localBlockIndex+" is direct")
+			debug("[inode]\tblock "+localBlockIndex+" is direct")
 			bytes.get4(40 + (localBlockIndex * 4))
 		} else {
 			var index = localBlockIndex - 12
 
 			if( index < indirectsPerBlock ) { // fits in first indirect
-				println("[inode]\tblock "+localBlockIndex+" is indirect: "+index)
+				debug("[inode]\tblock "+localBlockIndex+" is indirect: "+index)
 				val pointersAt = bytes.get4(40 + (12 * 4))
 				resolveIndirect(pointersAt, index, 1)
 			} else {
 				index = index - indirectsPerBlock
 				if( index < doubleIndirectsPerBlock ) { //fits in double-indirect
-					println("[inode]\tblock "+localBlockIndex+" is dbl indirect: "+index)
+					debug("[inode]\tblock "+localBlockIndex+" is dbl indirect: "+index)
 					val pointersAt = bytes.get4(40 + (13 * 4))
 					resolveIndirect(pointersAt, index, 2)
 				} else {
 					index = index - doubleIndirectsPerBlock
 					if( index < tripleIndirectsPerBlock ) {
-					println("[inode]\tblock "+localBlockIndex+" is tri indirect: "+index)
+					debug("[inode]\tblock "+localBlockIndex+" is tri indirect: "+index)
 						val pointersAt = bytes.get4(40 + (14 * 4))
 						resolveIndirect(pointersAt, index, 3);
 					} else {
@@ -135,14 +138,14 @@ class Inode(val fs : FileSystem, val num: Long, val bytes: Bytes) {
 	}
 
 	def blocks = {
-		println("[inode]\tReading blocks...")
+		debug("[inode]\tReading blocks...")
 		var blocks = List[Block]()
 		var i = 0
 		var valid = true
 		while (i < blockCount && valid) {
 
 			val blockNum = numberOfBlock(i)
-			println("[inode]\t\t"+i+" -> "+blockNum)
+			debug("[inode]\t\t"+i+" -> "+blockNum)
 
 			if(blockNum > 0) {
 				blocks = fs.block(blockNum) :: blocks
@@ -151,12 +154,16 @@ class Inode(val fs : FileSystem, val num: Long, val bytes: Bytes) {
 			}
 			i = i + 1
 		}
-		println("[inode]\tDone reading blocks...")
+		debug("[inode]\tDone reading blocks...")
 		blocks reverse
 		
 	}
 
 /*
+	// First try -- 
+	// might be simpler to instead separate reading logic from calculating indirects
+	// calculating indirects seems like it should be recursive?
+	
 	def blocks : List[Block] = {
 		var blocks = List[Block]()
 
@@ -165,7 +172,7 @@ class Inode(val fs : FileSystem, val num: Long, val bytes: Bytes) {
 
 		breakable {
 		 //block indirection:
-		 //  addr 0 = *(40 + num*4) // direct block, or ptr if num >= 12
+		 //  addr 0 = *(40 + num*4) // direct block, or retr if num >= 12
 		 //  addr 1 = *(addr0 + off1) // indirect block, or ptr if num >= 13
 		 //  addr 2 = *(addr1 + off2) // double-indirect block, or ptr if num >= 14
 		 //  addr 3 = *(addr2 + off3) //triple-indirect block
@@ -173,7 +180,7 @@ class Inode(val fs : FileSystem, val num: Long, val bytes: Bytes) {
 				val block0 = bytes.get4(Inode.firstBlock + (offset0 * 4))
 				if(addr0 <= 0) break
 				
-				println("> "+offset0+"\t "+addr0)
+				debug("> "+offset0+"\t "+addr0)
 
 				if(offset0 < 12) {
 					//direct blocks -- addr0 is pointer to block
@@ -184,7 +191,7 @@ class Inode(val fs : FileSystem, val num: Long, val bytes: Bytes) {
 						val addr1 = fs.block.get4(addr0.toInt + (offset1 * 4) )
 						if(addr1 <= 0) break;
 		
-						println(">\t>"+offset1+"\t "+addr1)
+						debug(">\t>"+offset1+"\t "+addr1)
 
 						if(offset0 == 12) { //indirect blocks
 							blocks = fs.blockAt(addr1.toInt) :: blocks
@@ -194,7 +201,7 @@ class Inode(val fs : FileSystem, val num: Long, val bytes: Bytes) {
 								val addr2 = fs.bytes.get4(addr1.toInt + (offset2 * 4) )
 								if(addr2 <= 0) break;
 
-								println(">\t>\t>"+offset1+"\t "+addr1)
+								debug(">\t>\t>"+offset1+"\t "+addr1)
 
 								if(offset0  == 13) { //dbl-ind blocks
 									blocks = fs.block(addr2.toInt) :: blocks
@@ -228,7 +235,7 @@ class Inode(val fs : FileSystem, val num: Long, val bytes: Bytes) {
 
 	def looksLikeDir = format==Constants.EXT2_S_IFDIR
 
-	override def toString = "["+(bytes.trueOffset)+"]\tformat: "+hex(format)+"\towner: "+owner+"\tperms: "+hex(umask)+"\tsize: "+size+"\tlinks: "+linkCount +"\tblocks: "+blockCount
+	override def toString = "Location: 0x"+hex(bytes.trueOffset)+"\tformat: "+hex(format)+"\towner: "+owner+"\tperms: "+hex(umask)+"\tsize: "+size+"\tlinks: "+linkCount +"\tblocks: "+blockCount+"\t 512 blocks: "+halfKBlockCount
 }
 
 

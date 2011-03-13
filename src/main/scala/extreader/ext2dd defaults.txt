@@ -1,0 +1,14 @@
+ext2fs.dd
+OS type: Linux
+Block size=1024 (log=0)
+Fragment size=1024 (log=0)
+Stride=0 blocks, Stripe width=0 blocks
+12824 inodes, 51200 blocks
+2560 blocks (5.00%) reserved for the super user
+First data block=1
+Maximum filesystem blocks=52428800
+7 block groups
+8192 blocks per group, 8192 fragments per group
+1832 inodes per group
+Superblock backups stored on blocks: 
+        8193, 24577, 40961

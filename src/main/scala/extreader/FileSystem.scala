@@ -1,9 +1,14 @@
 package extreader
 
-class FileSystem(val bytes: Bytes, val clean:Option[Bytes]) {
+object FileSystem {
+	def apply(bytes: Bytes) = new FileSystem(bytes, Map[String, Long](), None )
+}
+
+class FileSystem(val bytes: Bytes, val overrides: Map[String, Long], val clean:Option[Bytes] ) {
 	val metaBytes = clean.getOrElse(bytes)
 	val blockCache = collection.mutable.Map[Long, Block]()
 	val groupCache = collection.mutable.Map[Long, Group]()
+	val inodeCache = collection.mutable.Map[Long, Inode]()
 
 	var blockSizeExpo = 0
 
@@ -41,7 +46,7 @@ class FileSystem(val bytes: Bytes, val clean:Option[Bytes]) {
 	val gdt = new GroupDescTable(groupDescBlock)
 
 	def block(num: Long): Block = { 
-		println("[fs]\tfetch block "+num)
+		debug("[fs]\tfetch block "+num)
 		 
 		blockCache.getOrElseUpdate(num, blockAt(num, num * blockSize))
 	}
@@ -50,11 +55,13 @@ class FileSystem(val bytes: Bytes, val clean:Option[Bytes]) {
 		metaBlockAt(num, num * blockSize)
 	}
 
-	def inode(num: Long): Inode = {
+	def inode(num: Long) = inodeCache.getOrElseUpdate(num, loadInode(num))
+
+	def loadInode(num: Long): Inode = {
 		if(num < 1 || num > inodeCount) {
 			throw new IllegalArgumentException("Bad Inode Number: "+num)
 		}
-		println("[fs]\tinode "+num+" is the "+inodeIndexInBlock(num)+" inode in group "+groupNumOfInode(num))
+		debug("[fs]\tinode "+num+" is the "+inodeIndexInBlock(num)+" inode in group "+groupNumOfInode(num))
 		
 		val inodeBytes = group(groupNumOfInode(num)).inodeBytes(inodeIndexInBlock(num))
 
@@ -62,7 +69,7 @@ class FileSystem(val bytes: Bytes, val clean:Option[Bytes]) {
 	}
 
 	def group(num: Long): Group = {
-		println("[fs]\tfetch group "+num)
+		debug("[fs]\tfetch group "+num)
 		groupCache.getOrElseUpdate(num, new Group(this, num, gdt(num) ))
 	}
 
@@ -71,7 +78,7 @@ class FileSystem(val bytes: Bytes, val clean:Option[Bytes]) {
 	def inodeIndexInBlock(inodeNum: Long) = ( (inodeNum - 1) % inodesPerGroup )
 		
 	def blockAt(num: Long, at: Long) = {
-		println("[fs]\tblock "+num+" at "+at)
+		debug("[fs]\tblock "+num+" at "+at)
 		new Block(num, bytes.getRange(at, blockSize) )
 	}
 
@@ -81,11 +88,11 @@ class FileSystem(val bytes: Bytes, val clean:Option[Bytes]) {
 	def fakeInodeAt(at: Long) = new Inode( this, -1, bytes.getRange(at, inodeSize))
 }
 
-class Ext2Fs(bytes: Bytes, metaBytes: Option[Bytes]) extends FileSystem(bytes, metaBytes) {
+class Ext2Fs(bytes: Bytes, overrides: Map[String, Long], metaBytes: Option[Bytes]) extends FileSystem(bytes, overrides, metaBytes) {
 	def hasValidSuperblock = false
 }
 
-class Ext3Fs(bytes: Bytes, metaBytes: Option[Bytes]) extends FileSystem(bytes, metaBytes) {
+class Ext3Fs(bytes: Bytes, overrides: Map[String, Long], metaBytes: Option[Bytes]) extends FileSystem(bytes, overrides, metaBytes) {
 	override def metadataInGroup(groupNum: Int) = {
 		if (sparseMetadata)
     	(groupNum <= 1 || (groupNum isPowerOf 3) || (groupNum isPowerOf 5) || (groupNum isPowerOf 7))
