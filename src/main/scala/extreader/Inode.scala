@@ -65,7 +65,8 @@ class Inode(val fs : FileSystem, val num: Long, val bytes: Bytes) {
 	*	40	15 x 4	i_block
 	*/
 	def mode = bytes.get2(0)
-	def format = mode & Constants.EXT2_S_IFMT
+	def format = (mode & Constants.EXT2_S_IFMT) 
+
 	def umask = mode & (0x0777)
 	def perms = mode & 0xF000
 	def owner = bytes.get2(2)
@@ -78,8 +79,8 @@ class Inode(val fs : FileSystem, val num: Long, val bytes: Bytes) {
 	def linkCount = bytes.get2(26)
 	def halfKBlockCount = bytes.get4(28)
 
-	def isFile = format == Constants.EXT2_FT_REG_FILE
-	def isDir = format == Constants.EXT2_FT_DIR
+	def isFile = format == Constants.EXT2_S_IFREG
+	def isDir = format == Constants.EXT2_S_IFDIR
 
 	def blockCount = halfKBlockCount /^ (2<<fs.blockSizeExpo)
 
@@ -229,16 +230,11 @@ class Inode(val fs : FileSystem, val num: Long, val bytes: Bytes) {
 	 
 	 
 	 
-	 
+	def readableType = if(isFile) "file" else if(isDir) "directory" else "other"
 	
 	def looksValid = (format == Constants.EXT2_S_IFLNK || format == Constants.EXT2_S_IFREG || format == Constants.EXT2_S_IFBLK || format == Constants.EXT2_S_IFIFO || format == Constants.EXT2_S_IFDIR || format == Constants.EXT2_S_IFCHR)
 
 	def looksLikeDir = format==Constants.EXT2_S_IFDIR
 
-	override def toString = "Location: 0x"+hex(bytes.trueOffset)+"\tformat: "+hex(format)+"\towner: "+owner+"\tperms: "+hex(umask)+"\tsize: "+size+"\tlinks: "+linkCount +"\tblocks: "+blockCount+"\t 512 blocks: "+halfKBlockCount
-}
-
-
-class InodeTable(fs: FileSystem) {
-	
+	override def toString = "Inode #"+num+" (0x"+hex(bytes.trueOffset)+"):\ttype: "+readableType+" ("+(format % 0xFFF)+")\tsize: "+size +"\tblocks: "+blockCount+"\t 512 blocks: "+halfKBlockCount
 }

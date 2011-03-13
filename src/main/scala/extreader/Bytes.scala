@@ -1,6 +1,6 @@
 package extreader
 
-import java.io.{FileInputStream, File}
+import java.io.{FileInputStream, File, OutputStream}
 
 trait Bytes {
 	def get4(offset : Long ) : Long
@@ -15,6 +15,10 @@ trait Bytes {
 
 	def getRange(base : Long, length : Long) : Bytes
 	
+  def writeTo(os: OutputStream)
+
+  def writeWithOffsetAndLengthTo(os: OutputStream, offset: Long, length: Long)
+
 	def getFrom(base : Long) : Bytes
 }
 
@@ -70,6 +74,14 @@ class ByteArrayWrapper( val data : Array[Char] ) extends Bytes {
 
   def getFrom(base : Long) = new BytesWithOffet( this, base )
 
+  def writeTo(os: OutputStream) = writeWithOffsetAndLengthTo(os, 0, length)
+
+  def writeWithOffsetAndLengthTo(os: OutputStream, writeOffset: Long, writeLength: Long) = {
+    debug("[Bytes]\tWriting "+writeLength+" bytes from "+writeOffset+" to stream...")
+    for(i <- 0 until writeLength) {
+      os.write(data(i+writeOffset))
+    }
+  }
 
   def lim(b : Char) : Char = (b & 0xFF).toChar
 
@@ -102,6 +114,13 @@ class BytesWrapper(val data: Bytes) extends Bytes {
   def getRange(newBase : Long, newLength : Long) = new ByteRange(data, newBase, newLength)
 
   def getFrom(newBase : Long) = new BytesWithOffet( data, newBase )
+
+  def writeTo(os: OutputStream) = data.writeTo(os)
+
+  def writeWithOffsetAndLengthTo(os: OutputStream, writeOffset: Long, writeLength: Long) = { 
+    data.writeWithOffsetAndLengthTo(os, writeOffset, writeLength )
+  }
+
 }
 
 class BytesWithOffet( val data: Bytes, base : Long) extends Bytes {
@@ -121,6 +140,13 @@ class BytesWithOffet( val data: Bytes, base : Long) extends Bytes {
   def getRange(newBase : Long, newLength : Long) = new ByteRange(data, base + newBase, newLength)
 
   def getFrom(newBase : Long) = new BytesWithOffet( data, base+newBase )
+
+  def writeTo(os: OutputStream) = writeWithOffsetAndLengthTo(os, 0, length )
+
+  def writeWithOffsetAndLengthTo(os: OutputStream, writeOffset: Long, writeLength: Long) = { 
+    data.writeWithOffsetAndLengthTo(os, writeOffset + base, writeLength )
+  }
+
 
 }
 
@@ -145,4 +171,11 @@ class ByteRange (val data : Bytes, base : Long, count : Long ) extends Bytes {
 		if(pos >= (base + length)) throw new IndexOutOfBoundsException(pos + " >= ("+base+" + "+length+")")
 		pos
 	}
+
+  def writeTo(os: OutputStream) = writeWithOffsetAndLengthTo(os, 0, length )
+
+  def writeWithOffsetAndLengthTo(os: OutputStream, writeOffset: Long, writeLength: Long) = { 
+    data.writeWithOffsetAndLengthTo(os, check(writeOffset + base), writeLength )
+  }
+
 }

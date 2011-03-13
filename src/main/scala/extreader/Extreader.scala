@@ -16,7 +16,7 @@ package object extreader {
 		def /^(y:Long) = (x + y - 1) / y 
 	}
 
-	def debug(msg : => AnyRef) = { if(true) println(msg.toString) }
+	def debug(msg : => AnyRef) = { if(false) println(msg.toString) }
 
 	class LongWithIsPowerOf(x:Long) { 
 		def isPowerOfTwo = {

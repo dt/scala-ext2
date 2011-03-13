@@ -45,6 +45,38 @@ object Reader {
 
 		val rootDir = Directory(rootInode, "/")
 
+		def printTree(root: Directory, prefix: String) {
+			println(prefix+ "+ "+root.name)
+			for(dir <- root.subdirs) {
+				printTree(dir, prefix + "  ")
+			}
+
+			for(file <- root.files) {
+				println(prefix+" - "+file.name)
+			}
+		}
+
+		def dumpTree(root: Directory, target: File) {
+			println("Dumping '"+root.name+"' to "+target+"...")
+
+
+			target.mkdir()
+
+			for(dir <- root.subdirs)
+				dumpTree(dir, new File(target, dir.name))
+
+			for(file <- root.files) {
+				println("Dumping contents of '"+file.name+"' ("+file.inode.size+" bytes)...")
+				file.dumpTo(target)
+			}
+		}
+
+		printTree(rootDir, "")
+
+		dumpTree(rootDir, new File("dump"))
+
+	
+
 		/*
 		println("Searching for root directory listing...")
 		val root = Directory.findRootdir(fs)

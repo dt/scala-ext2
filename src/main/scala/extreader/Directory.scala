@@ -43,20 +43,33 @@ object DirectoryFinder {
 }
 
 object Directory {
-	def apply(inode: Inode, name: String) = {
-		debug("loading directory: "+name)
+	def apply(inode: Inode, name: String) : Directory = {
+		debug("[dir] Loading directory: "+name)
 		val dir = new Directory(inode, name)
 		debug(inode)
 		var valid = true
 
 		for( block <- inode.blocks ) {
-			debug("[dir]\tscanning "+block)
 			if(valid) {
 				var i = 0
 				while(valid && i < block.length - DirRec.minLength) {
 					val rec = new DirRec( block.getFrom(i) )
 					
-					debug("[dir]\t"+rec)
+					debug("[dir] Processing: "+rec)
+
+					if(rec.inodeNum != inode.num && rec.inodeNum > 0 && !rec.nameIsDot && !rec.nameIsDotDot) {
+						val child = inode.fs.inode(rec.inodeNum)
+
+						if(child.isDir) {
+							debug("[dir]\trecursing into child dir "+rec.name)
+							dir.subdirs = Directory(child, rec.name) :: dir.subdirs
+						}
+
+						if(child.isFile) {
+							debug("[dir]\tAdding file "+rec.name)
+							dir.files = new FsFile(child, rec.name) :: dir.files
+						}
+					}
 
 					if(rec.length == 0) {
 						valid = false
@@ -66,7 +79,7 @@ object Directory {
 				}
 			}
 		}
-		 
+		dir 
 	}
 }
 
@@ -81,7 +94,7 @@ object DirRec {
 }
 
 class DirRec(bytes : Bytes) {
-	def inode = { bytes.get4(0) }
+	def inodeNum = { bytes.get4(0) }
 	def length = { bytes.get2(4) }
 	def nameLength = { bytes.get1Int(6)  }
 	def ftype = { bytes.get1Int(7)  }
@@ -101,7 +114,7 @@ class DirRec(bytes : Bytes) {
 	}
 
 	override def toString = {
-		hex(bytes.trueOffset) +"\t\tinode: "+inode +"\tlen: "+length + "\ttype: " +ftype+ "\tname("+nameLength + "): '"+name+"'"
+		hex(bytes.trueOffset) +"\t\tinode: "+inodeNum +"\tlen: "+length + "\ttype: " +ftype+ "\tname("+nameLength + "): '"+name+"'"
 	}
 
 }
