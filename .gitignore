@@ -9,3 +9,4 @@ build.xml
 .classpath
 nbproject
 manifest.mf
+dump/

@@ -8,8 +8,12 @@
 
 
 
+Notes:
 
-
+	Types:
+		BlockNum (which is just an alias for Long) should only be used to identify absolute block numbers, not offsets
+		
+		
 
 
 
