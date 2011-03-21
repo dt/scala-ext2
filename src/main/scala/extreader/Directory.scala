@@ -2,40 +2,40 @@ package extreader
 
 object DirectoryFinder {
 
-	def scanAndBuildTree(bytes:Bytes) = {
-		scanForDirs(bytes, i => {
-			val dir = new DirRec( bytes.getFrom( i ) )
-			debug(dir)
-			
-			false
-		})
-	}
-
 	def findRootdir(fs : FileSystem) : Option[Int] = {
 		val bytes = fs.bytes
 		scanForDirs(bytes, i => {
 			val d1 = new DirRec( bytes.getFrom( i ) )
 			val d2 = new DirRec( bytes.getFrom( i+d1.length ) )
-			debug("\t "+ d1 )
 
-			var offset = d1.length
-			for (d<- 1 to 10) {
-					val dir = new DirRec( bytes.getFrom( i+offset ) )
-					offset += dir.length
-					debug("\t "+ dir )
-				}
-				(d1.nameIsDot && d2.nameIsDotDot)
-			})
-  }
+			if( (d2.nameIsDotDot && d1.inodeNum == d2.inodeNum)) {
+				debug("[DirF]\t"+d1 )
+				debug("[DirF]\t"+d2 )
+				debug("[DirF]\t1k Block: "+d1.bytes.trueOffset / 1024 + "; 2k block: " + d1.bytes.trueOffset / 2048 )
+				debug("")
 
+			}
+
+			false
+		})
+	}
+  
+
+  /**
+  	Will invoke fn on each 
+  */
 	def scanForDirs(bytes : Bytes, fn : Int => Boolean) : Option[Int] = {
 		var i = 0
-		while(i < bytes.length - 8) {
-			val d1 = new DirRec( bytes.getFrom( i ) )
-			if(d1.length <= DirRec.maxLength && d1.nameIsDot) {
-				if(fn(i)) return Some(i)
-				i += math.max(d1.length - 1, 0)
-			}
+		while(i < bytes.length - DirRec.minLength) {
+
+			val dir = new DirRec( bytes.getFrom( i ) )
+
+			if(dir.length <= DirRec.maxLength && dir.nameIsDot ) {
+				
+				if( fn(i) )
+					return Some(i)
+				
+			} 
 			i += 1
 		}
 		None
@@ -93,7 +93,7 @@ object DirRec {
 	val minLength = 8
 }
 
-class DirRec(bytes : Bytes) {
+class DirRec(val bytes : Bytes) {
 	def inodeNum = { bytes.get4(0) }
 	def length = { bytes.get2(4) }
 	def nameLength = { bytes.get1Int(6)  }
