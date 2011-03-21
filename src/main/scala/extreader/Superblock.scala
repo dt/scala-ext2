@@ -65,6 +65,14 @@ class Superblock(val bytes : Bytes) {
   def mnt_count = { bytes.get2(52) }
 	def magicNum = { bytes.get2(56) }
 
+	def feature_compat = { bytes.get4(92) }
+
+	//Journaling
+	def journalEnabled = { 
+		(feature_compat & Constants.EXT3_FEATURE_COMPAT_HAS_JOURNAL) != 0
+	}
+	def journalInode = { bytes.get4(224) }
+
 	def isValid = { 
 		magicNum == 0xEF53 &&
 		( firstBlock == 1 && logBlockSize == 0) ||

@@ -80,5 +80,13 @@ object Constants {
 	val EXT3_FEATURE_INCOMPAT_JOURNAL_DEV = 0x0008L
 	val EXT2_FEATURE_INCOMPAT_META_BG = 0x0010L
 
+	// S_FEATURE_COMPAT values
+	val EXT2_FEATURE_COMPAT_DIR_PREALLOC = 0x0001L	//Block pre-allocation for new directories
+	val EXT2_FEATURE_COMPAT_IMAGIC_INODES =	0x0002L 
+	val EXT3_FEATURE_COMPAT_HAS_JOURNAL = 0x0004L	//An Ext3 journal exists
+	val EXT2_FEATURE_COMPAT_EXT_ATTR = 0x0008L		//Extended inode attributes are present
+	val EXT2_FEATURE_COMPAT_RESIZE_INO = 0x0010L	//Non-standard inode size used
+	val EXT2_FEATURE_COMPAT_DIR_INDEX = 0x0020L
+
 	val EXT2_GOOD_OLD_INODE_SIZE = 128
 }

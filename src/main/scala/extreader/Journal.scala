@@ -3,7 +3,7 @@ package extreader
 class JournalHeader(bytes: Bytes) {
 	def signature = bytes.get4(0)
 	def blockType = bytes.get4(4)
-	def seqNum = bytes.get4(4)
+	def seqNum = bytes.get4(8)
 }
 
 class JournalSuperblock(bytes: Bytes) {

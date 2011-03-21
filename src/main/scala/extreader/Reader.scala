@@ -74,6 +74,12 @@ object Reader {
 			case Some(sb) => {
 				println("Loading filesystem...")
 				val fs = new FileSystem(bytes, sb, cleanBytes)
+
+				print("Dumping journal... ")
+				val journal = new FsFile(fs.inode(sb.journalInode), "journal")
+				journal.dumpTo(new java.io.File("."))
+				println("done.")
+
 				val rootInode = fs.inode(2)
 				val rootDir = Directory(rootInode, "/")
 

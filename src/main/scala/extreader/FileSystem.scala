@@ -69,7 +69,7 @@ class FileSystem(val bytes: Bytes, sb: Superblock, val clean: Option[Bytes]) {
 		if(num < 1 || num > inodeCount) {
 			throw new IllegalArgumentException("Bad Inode Number: "+num)
 		}
-		debug("[fs]\tinode "+num+" is the "+inodeIndexInBlock(num)+" inode in group "+groupNumOfInode(num))
+		debug("[fs]\tinode "+num+" is the "+inodeIndexInBlock(num)+"th inode in group "+groupNumOfInode(num))
 		
 		val inodeBytes = group(groupNumOfInode(num)).inodeBytes(inodeIndexInBlock(num))
 
