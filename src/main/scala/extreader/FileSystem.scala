@@ -5,6 +5,8 @@ object FileSystem {
 }
 
 class FileSystem(val bytes: Bytes, val overrides: Map[String, Long], val clean:Option[Bytes] ) {
+	var superblock : Option[Superblock] = None
+
 	val metaBytes = clean.getOrElse(bytes)
 	val blockCache = collection.mutable.Map[Long, Block]()
 	val groupCache = collection.mutable.Map[Long, Group]()
@@ -12,8 +14,7 @@ class FileSystem(val bytes: Bytes, val overrides: Map[String, Long], val clean:O
 
 	var blockSizeExpo = 0
 
-	var blocksPerGroup = 8192 // 8 * blockSize
-
+	var blocksPerGroup = 8192 // 8 * blockSize ?
 
 	var inodesPerGroup = 1832 // ext3: 1920
 
@@ -28,14 +29,14 @@ class FileSystem(val bytes: Bytes, val overrides: Map[String, Long], val clean:O
 
 	def blockSize = 1024 << blockSizeExpo
 
-	var inodeSize = 128
+	def inodeSize = 128
 
 	val inodesPerBlock = blockSize / inodeSize
 
 	def intsPerBlock = blockSize / 4
 
 	def sparseMetadata = false
-	def metadataInGroup(groupNum: Int) = true
+	def metadataInGroup(groupNum: Int) = !sparseMetadata
 
 	def groupDescBlock = {
 		if(blockSize == 1024 ) 
@@ -100,5 +101,10 @@ class Ext3Fs(bytes: Bytes, overrides: Map[String, Long], metaBytes: Option[Bytes
     else
     	true
    }
+
+   override def inodeSize = superblock match { 
+	   case Some(sb) => sb.inodeSize
+	   case None => 128
+	} 
 
 }

@@ -3,14 +3,14 @@ package object extreader {
 	type BlockNum = Long
 
 
-  def hex(buf: Array[Byte]): String = buf.map("%02X" format _).mkString
-  def hex(i:Int):String = "%02X" format i
-  def hex(i:Char):String = "%02X" format i
-  def hex(i:Byte):String = "%02X" format i
-  def hex(i:Long):String = "%02X" format i
+	def hex(buf: Array[Byte]): String = buf.map("%02X" format _).mkString
+	def hex(i:Int):String = "%02X" format i
+	def hex(i:Char):String = "%02X" format i
+	def hex(i:Byte):String = "%02X" format i
+	def hex(i:Long):String = "%02X" format i
 
-  implicit def Long2LongWithRoundUpDiv(x:Long) = new LongWithRoundUpDiv(x) 
-  implicit def Long2LongWithIsPowerOf(x:Long) = new LongWithIsPowerOf(x) 
+	implicit def Long2LongWithRoundUpDiv(x:Long) = new LongWithRoundUpDiv(x) 
+	implicit def Long2LongWithIsPowerOf(x:Long) = new LongWithIsPowerOf(x) 
 
 	class LongWithRoundUpDiv(x:Long) {
 		def /^(y:Long) = (x + y - 1) / y 
