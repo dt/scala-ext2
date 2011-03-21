@@ -25,9 +25,9 @@ Ext2 reader and recovery in Scala
 FS creation tools are one good way of guessing the irrecoverable metadata, like locations of superblocks or group descriptors, since they write these in the first place.
 
 Currently the FileSystem class can try to load fs metadata (superblock, gdt) from the main image, or from a separate image 
-	Thus, if superblock & gdt's are trashed, you could:
+	Thus, if superblock & gdt's are trashed, for ext2, you could:
 	>	cp <bad image file> <new image file>
-	>	mkfs <new image>
+	>	mkfs.ext2 <new image>
 
 	Now point cleanBytes at <new image file> in Reader.scala.
 Otherwise, pass a None for the cleanBytes option.

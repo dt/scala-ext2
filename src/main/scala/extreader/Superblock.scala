@@ -20,31 +20,30 @@ object SuperblockFinder {
 		None
 	}
 
-	def allPossible(bytes: Bytes) : List[(Long, Int)] = List[(Long,Int)]()
+	def allPossible(bytes: Bytes) : List[(Long, Int)] = { println("Sorry, not implemented"); List[(Long,Int)]() }
 }
 
 object Superblock {
 	val size = 1024
-  val defaultOffset = 1024
+	val defaultOffset = 1024
 
-  def apply(bytes: Bytes) = new Superblock(bytes)
+	def apply(bytes: Bytes) = new Superblock(bytes)
 
-  def in(bytes: Bytes) = {
-  	at(bytes, defaultOffset)
-  }
+	def in(bytes: Bytes) = {
+		at(bytes, defaultOffset)
+	}
 
 	def at(bytes : Bytes, pos : Long ) = {
 		new Superblock( bytes.getRange(pos, size ) )
 	}
-
 	
 }
 
 class Superblock(val bytes : Bytes) {
 
-  def inodeCount = { bytes.get4(0) }
-  def blockCount = { bytes.get4(4) }
-  def firstBlock = { bytes.get4(20) }
+	def inodeCount = { bytes.get4(0) }
+	def blockCount = { bytes.get4(4) }
+	def firstBlock = { bytes.get4(20) }
 	def blockSize = { 1024 << logBlockSize } // = math.pow(1024, logBlockSize)
 	def logBlockSize = { bytes.get4(24) }
 	def logFragSize = { bytes.get4(28) }
@@ -60,9 +59,9 @@ class Superblock(val bytes : Bytes) {
 		else
 			bytes.get2(88)
 	}
-  def mtime = { bytes.get4(44) }
-  def wtime = { bytes.get4(48) }
-  def mnt_count = { bytes.get2(52) }
+	def mtime = { bytes.get4(44) }
+	def wtime = { bytes.get4(48) }
+	def mnt_count = { bytes.get2(52) }
 	def magicNum = { bytes.get2(56) }
 
 	def feature_compat = { bytes.get4(92) }

@@ -44,9 +44,9 @@ object DirectoryFinder {
 
 object Directory {
 	def apply(inode: Inode, name: String) : Directory = {
-		debug("[dir] Loading directory: "+name)
+		debug("[dir]\tLoading directory: "+name)
 		val dir = new Directory(inode, name)
-		debug(inode)
+		debug("[dir]\t"+inode)
 		var valid = true
 
 		for( block <- inode.blocks ) {

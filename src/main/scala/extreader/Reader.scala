@@ -25,18 +25,20 @@ object Reader {
 			args(i) match {
 				case Assign(a,v) => {
 					a match {
-						case "metaimage" => cleanImg = Some(v) 
-						case "overrideSB" => overrideSB = Some(v.toLong)
-						case "debug" => extreader.showDebug = v.toBoolean
-						case _ => println("Unknown option: "+a)
+						case "metaimage" => { cleanImg = Some(v) } 
+						case "overrideSB" => { overrideSB = Some(v.toLong) }
+						case "debug" => { extreader.showDebug = v.toBoolean }
+						case _ => { println("Unknown option: '"+a+"'") }
 					}
 				}
 				case _ => println("Malformed option: "+args(i))
 			}
 		}
 
-		println("File: "+image.getAbsolutePath)
+		println("Image file: "+image.getAbsolutePath)
 		
+		debug("Debug output enabled...")
+
 		val bytes = Bytes fromFile image
 
 		val cleanBytes = cleanImg.map{ cleanFile => {
@@ -75,23 +77,35 @@ object Reader {
 				println("Loading filesystem...")
 				val fs = new FileSystem(bytes, sb, cleanBytes)
 
-				print("Dumping journal... ")
-				val journal = new FsFile(fs.inode(sb.journalInode), "journal")
-				journal.dumpTo(new java.io.File("."))
-				println("done.")
+				debug("File system info:")
+				debug("\tblock size: "+fs.blockSize)
+				debug("\tinode size: "+fs.inodeSize)
+				debug("\tInodes per group: "+fs.inodesPerGroup)
+				debug("\tBlocks per group: "+fs.blocksPerGroup)
+
+				if (sb.journalEnabled) {
+					print("Dumping journal... ")
+					val journal = new FsFile(fs.inode(sb.journalInode), "journal")
+					journal.dumpTo(new java.io.File("."))
+					println("done.")
+				}
 
 				val rootInode = fs.inode(2)
+
 				val rootDir = Directory(rootInode, "/")
 
 				printTree(rootDir, "")
 				//dumpTree(rootDir, new File("dump"))
 			}
 			case None => {
-				println("No superblock: ")
+				println()
+				println(Console.RED + "No superblock: " + Console.WHITE)
+				println()
+
 				println("\t* Provide a alternate location in image: overrideSB=<pos>")
 				println("\t* Provide a alternate image for metadata: metaimage=<metaimg>")
 				println()
-				println("Would you like to search for possible superblocks?")
+				println("Would you like to search for possible superblocks? (y/n)")
 				if( Console readBoolean ) {
 					SuperblockFinder search bytes 
 				}
