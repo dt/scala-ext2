@@ -12,16 +12,16 @@ class FileSystem(val bytes: Bytes, sb: Superblock, val clean: Option[Bytes]) {
 	val groupCache = collection.mutable.Map[Long, Group]()
 	val inodeCache = collection.mutable.Map[Long, Inode]()
 
-	var blockSizeExpo = 0
+	def blockSizeExpo = sb.logBlockSize
 
-	var blocksPerGroup = 8192 // 8 * blockSize ?
+	var blocksPerGroup = sb.blocksPerGroup // ext2: 8192 // 8 * blockSize ?
 
-	var inodesPerGroup = 1832 // ext3: 1920
+	var inodesPerGroup = sb.inodesPerGroup // ext2: 1832 // ext3: 1920
 
-	var inodeCount = 12824 // ext3: 19200
-	var blockCount = 51200 // ext3: 76800
+	var inodeCount = sb.inodeCount // ext2: 12824 // ext3: 19200
+	var blockCount = sb.blockCount // ext2: 51200 // ext3: 76800
 
-	var inodeBlocksPerGroup = 229
+	var inodeBlocksPerGroup = sb.inodesPerGroup // ext2: 229
 
 	var firstDataBlock = 1
 
@@ -34,6 +34,7 @@ class FileSystem(val bytes: Bytes, sb: Superblock, val clean: Option[Bytes]) {
 	def intsPerBlock = blockSize / 4
 
 	def sparseMetadata = false
+	
 	def metadataInGroup(groupNum: Int) = {
 		if (sparseMetadata)
 			(groupNum <= 1 || (groupNum isPowerOf 3) || (groupNum isPowerOf 5) || (groupNum isPowerOf 7))
