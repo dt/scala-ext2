@@ -76,9 +76,13 @@ object Reader {
 			case Some(sb) => {
 				println("Loading filesystem...")
 				val fs = new FileSystem(bytes, sb, cleanBytes)
+				debug("File system info:")
+				debug("\tblock size: "+fs.blockSize)
+				debug("\tinode size: "+fs.inodeSize)
+				debug("\tInodes per group: "+fs.inodesPerGroup)
+				debug("\tBlocks per group: "+fs.blocksPerGroup)
+
 				val rootInode = fs.inode(2)
-
-
 
 				val rootDir = Directory(rootInode, "/")
 
