@@ -1,67 +1,42 @@
 package extreader
 
-object Superblock {
-	val size = 1024
-  var firstPos = 1024
+object SuperblockFinder {
+	def search(bytes: Bytes) : Option[Superblock] = {
+		println("Searching for superblocks...")
+		var validSBs = allPossible(bytes)
 
-	def bestGuess(bytes : Bytes) = {
-		val first = loadFrom(bytes, firstPos)
-		if (first looksValid) {
-			first
-		} else {
-			debug("Could not load first superblock...")
-			findValid(bytes, firstPos + size) match {
-				case Some(i) => {
-					debug("Found a valid superblock at "+i)
-					loadFrom(bytes, i)
-				}
-				case None => throw new RuntimeException("Cannot find a valid superblock")
-			}
+		println("Possible SBs: "+validSBs)
+		for( (i, score) <- validSBs.sortBy( t => t._2 ) ) {
+			println("Possible Superblock ("+score+") at "+i)
+			val sb = Superblock.at(bytes, i)
+			println("\tLocation: "+sb.bytes.trueOffset)
+			println("\tMagic num: "+hex(sb.magicNum))
+			println("\tLooks valid: "+sb.isValid)
+			println("\tLog Block Size: "+sb.logBlockSize)
+			println("\tBlock Size: "+sb.blockSize)
+			println("\tFirst Block: "+sb.firstBlock)
+			//todo: interactive q/a to accept as sueprblock
 		}
+		None
 	}
 
-	def loadFrom(bytes : Bytes, pos : Int ) = {
+	def allPossible(bytes: Bytes) : List[(Long, Int)] = List[(Long,Int)]()
+}
+
+object Superblock {
+	val size = 1024
+  val defaultOffset = 1024
+
+  def apply(bytes: Bytes) = new Superblock(bytes)
+
+  def in(bytes: Bytes) = {
+  	at(bytes, defaultOffset)
+  }
+
+	def at(bytes : Bytes, pos : Long ) = {
 		new Superblock( bytes.getRange(pos, size ) )
 	}
 
-  def findAllPossible(bytes : Bytes) = {
-  	var results = List[(Int,Int)]()
-  	var i = firstPos
-  	var sb = findPossible(bytes, i)
-
-  	while( sb isDefined ) {
-  		i = sb.get._1
-  		val score = sb.get._2
-  		//debug("\tpossible superblock at "+i)
-  		results = (i, score) :: results
-  		sb = findPossible( bytes, i+1 )
-  	}
-  	results
-  }
-
-	def find(bytes : Bytes) : Option[Int] = findValid(bytes, 1024)
-
-	def findValid(bytes : Bytes, start : Int) : Option[Int] = {
-		var i = start
-		while(i < bytes.length - size) {
-			val sb = new Superblock( bytes.getRange( i, size ) )
-			if ( sb looksValid )
-				return Some(i)
-			i += 1
-		}
-		None
-	}
-
-	def findPossible(bytes : Bytes, start : Int) : Option[(Int, Int)] = {
-		var i = start
-		while(i < bytes.length - size) {
-			val sb = new Superblock( bytes.getRange( i, size ) )
-			if ( sb looksPossible )
-				return Some(i, sb.score)
-			i += 1
-		}
-		None
-	}
 	
 }
 
@@ -90,7 +65,7 @@ class Superblock(val bytes : Bytes) {
   def mnt_count = { bytes.get2(52) }
 	def magicNum = { bytes.get2(56) }
 
-	def looksValid = { 
+	def isValid = { 
 		magicNum == 0xEF53 &&
 		( firstBlock == 1 && logBlockSize == 0) ||
 		( firstBlock == 0 && logBlockSize > 0) &&

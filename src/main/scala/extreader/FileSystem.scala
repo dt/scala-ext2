@@ -1,10 +1,10 @@
 package extreader
 
 object FileSystem {
-	def apply(bytes: Bytes) = new FileSystem(bytes, Map[String, Long](), None )
+	def apply(bytes: Bytes) = new FileSystem(bytes, Superblock.in(bytes), None )
 }
 
-class FileSystem(val bytes: Bytes, val overrides: Map[String, Long], val clean:Option[Bytes] ) {
+class FileSystem(val bytes: Bytes, sb: Superblock, val clean: Option[Bytes]) {
 	var superblock : Option[Superblock] = None
 
 	val metaBytes = clean.getOrElse(bytes)
@@ -29,14 +29,19 @@ class FileSystem(val bytes: Bytes, val overrides: Map[String, Long], val clean:O
 
 	def blockSize = 1024 << blockSizeExpo
 
-	def inodeSize = 128
-
 	val inodesPerBlock = blockSize / inodeSize
 
 	def intsPerBlock = blockSize / 4
 
 	def sparseMetadata = false
-	def metadataInGroup(groupNum: Int) = !sparseMetadata
+	def metadataInGroup(groupNum: Int) = {
+		if (sparseMetadata)
+			(groupNum <= 1 || (groupNum isPowerOf 3) || (groupNum isPowerOf 5) || (groupNum isPowerOf 7))
+    else
+    	true
+  }
+
+  def inodeSize = sb.inodeSize
 
 	def groupDescBlock = {
 		if(blockSize == 1024 ) 
@@ -88,23 +93,4 @@ class FileSystem(val bytes: Bytes, val overrides: Map[String, Long], val clean:O
 		new Block(num, metaBytes.getRange(at, blockSize))
 	}
 	def fakeInodeAt(at: Long) = new Inode( this, -1, bytes.getRange(at, inodeSize))
-}
-
-class Ext2Fs(bytes: Bytes, overrides: Map[String, Long], metaBytes: Option[Bytes]) extends FileSystem(bytes, overrides, metaBytes) {
-	def hasValidSuperblock = false
-}
-
-class Ext3Fs(bytes: Bytes, overrides: Map[String, Long], metaBytes: Option[Bytes]) extends FileSystem(bytes, overrides, metaBytes) {
-	override def metadataInGroup(groupNum: Int) = {
-		if (sparseMetadata)
-    	(groupNum <= 1 || (groupNum isPowerOf 3) || (groupNum isPowerOf 5) || (groupNum isPowerOf 7))
-    else
-    	true
-   }
-
-   override def inodeSize = superblock match { 
-	   case Some(sb) => sb.inodeSize
-	   case None => 128
-	} 
-
 }

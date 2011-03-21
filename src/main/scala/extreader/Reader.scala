@@ -2,8 +2,8 @@ package extreader
 
 import java.io.File
 /*
-  Some inspiration taken from jNode's EXT2 implementation
-  http://gitorious.org/jnode/svn-mirror/trees/master/fs/src/fs/org/jnode/fs/ext2
+	Some inspiration taken from jNode's EXT2 implementation
+	http://gitorious.org/jnode/svn-mirror/trees/master/fs/src/fs/org/jnode/fs/ext2
 */
 
 object Reader { 
@@ -11,99 +11,78 @@ object Reader {
 		val image = new File(args(0))
 		println("File: "+image.getAbsolutePath)
 		val bytes = Bytes fromFile image
-		val cleanBytes = Bytes fromFile (new File("clean256.dd"))
-		val overrides = Map[String,Long]()
-		val fs = new Ext2Fs(bytes, overrides, Some(cleanBytes))
 
+		val cleanBytes = Some( Bytes fromFile (new File("clean256.dd")) )
+		var overrideSB : Option[Long] = None
 
-		val searchForSuperblocks = false
-		val searchForRootdir = true
+		val superblock: Option[Superblock] = overrideSB match {
+			case Some(pos) => {
+				Some(Superblock(bytes.getRange(pos, Superblock.size))) }
+			case None => {
+				//finding our own superblock...
+				// default first
+				val primarySB = Superblock in bytes
+			  if( primarySB isValid ) {
+			  	println("Valid superblock in image…")
+					Some(primarySB)
+				} else {
+					cleanBytes flatMap { cbytes => { 
+						val cleanSB = Superblock in cbytes
 
-		if (fs hasValidSuperblock) {
-				
-		} else {
-		  if(searchForSuperblocks) {
-				println("Searching for superblocks...")	  
-			  var validSBs = Superblock findAllPossible bytes
+						if( cleanSB isValid ) {
+							println("Superblock in image invalid, using one from alternate image…")
+							Some(cleanSB)
+						} else { 
+							None 
+						}
+					}
+				}}
+			}
+		}
 
-			  println("Possible SBs: "+validSBs)
-			  for( (i, score) <- validSBs.sortBy( t => t._2 ) ) {
-			  	println("Possible Superblock ("+score+") at "+i)
-			  	val sb = Superblock.loadFrom(bytes, i) 
-			  			println("\tLocation: "+sb.bytes.trueOffset)
-			  			println("\tMagic num: "+hex(sb.magicNum))
-			 		 		println("\tLooks valid: "+sb.looksValid)
-			  			println("\tLog Block Size: "+sb.logBlockSize)
-			  			println("\tBlock Size: "+sb.blockSize)
-			  			println("\tFirst Block: "+sb.firstBlock)
-					
+		superblock match {
+			case Some(sb) => {
+				val fs = new FileSystem(bytes, sb, cleanBytes)
+				val rootInode = fs.inode(2)
+				val rootDir = Directory(rootInode, "/")
+				printTree(rootDir, "")
+				//dumpTree(rootDir, new File("dump"))
+			}
+			case None => {
+				println("No superblock: ")
+				println("\t* Provide a alternate location in image: overrideSB=<pos>")
+				println("\t* Provide a alternate image for metadata: metaimage=<metaimg>")
+				println()
+				println("Would you like to search for possible superblocks?")
+				if( Console readBoolean ) {
+					SuperblockFinder search bytes 
 				}
 			}
 		}
+	}
 
-		val rootInode = fs.inode(2)
-
-		val rootDir = Directory(rootInode, "/")
-
-		def printTree(root: Directory, prefix: String) {
-			println(prefix+ "+ "+root.name)
-			for(dir <- root.subdirs) {
-				printTree(dir, prefix + "  ")
-			}
-
-			for(file <- root.files) {
-				println(prefix+" - "+file.name)
-			}
+	def printTree(root: Directory, prefix: String) {
+		println(prefix+ "+ "+root.name)
+		for(dir <- root.subdirs) {
+			printTree(dir, prefix + "	")
 		}
 
-		def dumpTree(root: Directory, target: File) {
-			println("Dumping '"+root.name+"' to "+target+"...")
-
-
-			target.mkdir()
-
-			for(dir <- root.subdirs)
-				dumpTree(dir, new File(target, dir.name))
-
-			for(file <- root.files) {
-				println("Dumping contents of '"+file.name+"' ("+file.inode.size+" bytes)...")
-				file.dumpTo(target)
-			}
+		for(file <- root.files) {
+			println(prefix+" - "+file.name)
 		}
+	}
 
-		printTree(rootDir, "")
+	def dumpTree(root: Directory, target: File) {
+		println("Dumping '"+root.name+"' to "+target+"...")
 
-		dumpTree(rootDir, new File("dump"))
+		target.mkdir()
 
-	
+		for(dir <- root.subdirs)
+			dumpTree(dir, new File(target, dir.name))
 
-		/*
-		println("Searching for root directory listing...")
-		val root = Directory.findRootdir(fs)
-		println("")
-
-		root.map { contents =>
-			println( "Found a root directory listing at "+hex(contents) )
-			println( "Scanning for an inode which points to this listing...")
-			val i2 = Inode.findByFirstBlockNum(fs, contents, _ => false)
-
-			i2 match {
-				case Some(i) => {
-					println("Found: "+hex(i.bytes.trueOffset))
-					println("\t"+i)
-					println("\t\tblocks:"+i.blocks)
-				}
-				case None => println("Could not find a matching node.")
-			}
+		for(file <- root.files) {
+			println("Dumping contents of '"+file.name+"' ("+file.inode.size+" bytes)...")
+			file.dumpTo(target)
 		}
-
-		val inodes = Inode.findAllBy(fs, x => x.looksLikeDir && x.size == 4096 && x.size <= x.blockCount * 512)
-		inodes.map{ x => println(hex(x.bytes.trueOffset)+"\t"+x)}
-
-		
-
-		// Directory.scanAndBuildTree(bytes)
-		*/
-
 	}
 }
