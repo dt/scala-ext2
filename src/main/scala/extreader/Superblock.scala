@@ -73,11 +73,11 @@ class Superblock(val bytes : Bytes) {
 	def journalInode = { bytes.get4(224) }
 
 	def isValid = { 
-		magicNum == 0xEF53 &&
+		magicNum == 0xEF53 && (
 		( firstBlock == 1 && logBlockSize == 0) ||
-		( firstBlock == 0 && logBlockSize > 0) &&
+		( firstBlock == 0 && logBlockSize > 0)) &&
 		inodeCount > 0 && blockCount > 0 &&
-		(inodeCount < inodesPerGroup * (blockCount /^ blocksPerGroup)) &&
+		(inodeCount <= inodesPerGroup * (blockCount /^ blocksPerGroup)) &&
 		(inodeSize.isPowerOfTwo && inodeSize <= blockSize) 
 
 	}

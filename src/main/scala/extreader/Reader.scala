@@ -20,6 +20,7 @@ object Reader {
 		var cleanImg:Option[String] = None
 		var overrideSB : Option[Long] = None
 
+		var groupPad = 1
 
 		for(i <- 1 until args.length) {
 			args(i) match {
@@ -28,6 +29,7 @@ object Reader {
 						case "metaimage" => { cleanImg = Some(v) } 
 						case "overrideSB" => { overrideSB = Some(v.toLong) }
 						case "debug" => { extreader.showDebug = v.toBoolean }
+						case "grouppad" => { groupPad = v.toInt}
 						case _ => { println("Unknown option: '"+a+"'") }
 					}
 				}
@@ -76,6 +78,7 @@ object Reader {
 			case Some(sb) => {
 				println("Loading filesystem...")
 				val fs = new FileSystem(bytes, sb, cleanBytes)
+				fs.groupDescPad = groupPad
 
 				debug("File system info:")
 				debug("\tblock size: "+fs.blockSize)
@@ -89,6 +92,10 @@ object Reader {
 					journal.dumpTo(new java.io.File("."))
 					println("done.")
 				}
+
+				val rootPos = DirectoryFinder findRootdir fs 
+
+				debug(rootPos)
 
 				val rootInode = fs.inode(2)
 

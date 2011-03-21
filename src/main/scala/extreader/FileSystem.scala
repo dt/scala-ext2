@@ -11,6 +11,8 @@ class FileSystem(val bytes: Bytes, sb: Superblock, val clean: Option[Bytes]) {
 	val groupCache = collection.mutable.Map[Long, Group]()
 	val inodeCache = collection.mutable.Map[Long, Inode]()
 
+	var groupDescPad = 0
+
 	def blockSizeExpo = sb.logBlockSize
 
 	def blocksPerGroup = sb.blocksPerGroup // ext2: 8192 // 8 * blockSize ?

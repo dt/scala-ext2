@@ -44,11 +44,11 @@ class GroupDesc(val bytes: Bytes) {
 }
 
 class Group(fs: FileSystem, val num: Long, desc: GroupDesc) {
-	def blockBitmapBlock = desc.blockBitmapBlock
-	def inodeBitmapBlock = desc.inodeBitmapBlock
-	def inodeTableFirstBlock = desc.inodeTableFirstBlock
-	def freeBlocks = desc.freeBlocks
-	def freeInodes = desc.freeInodes
+	def blockBitmapBlock = desc.blockBitmapBlock + fs.groupDescPad
+	def inodeBitmapBlock = desc.inodeBitmapBlock + fs.groupDescPad
+	def inodeTableFirstBlock = desc.inodeTableFirstBlock + fs.groupDescPad
+	def freeBlocks = desc.freeBlocks 
+	def freeInodes = desc.freeInodes 
 
 	def inodeBytes(inodeIndexInGroup: Long): Bytes = {
 		debug("[Group]\tLocation of "+inodeIndexInGroup+" inode in group "+num+"...")
