@@ -21,9 +21,9 @@ object Reader {
 		var forceBlocksize = Option.empty[Int]
 		var overrideSB = Option.empty[Long]
 		var groupPad = Option.empty[Int] 
-		var skipJournal = true
+		var skipJournal = false
 		var findDeleted = false
-		var dumpFiles = true
+		var dumpFiles = false
 
 		for(i <- 1 until args.length) {
 			args(i) match {
