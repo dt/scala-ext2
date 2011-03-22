@@ -10,12 +10,16 @@ package object extreader {
 	def hex(i:Byte):String = "%02X" format i
 	def hex(i:Long):String = "%02X" format i
 
+	def align(i: Int, d: Int) = (d + d%i)
+	def align(i: Int, d: Long) = (d + d%i)
+
 	implicit def Long2LongWithRoundUpDiv(x:Long) = new LongWithRoundUpDiv(x) 
 	implicit def Long2LongWithIsPowerOf(x:Long) = new LongWithIsPowerOf(x) 
 
 	class LongWithRoundUpDiv(x:Long) {
 		def /^(y:Long) = (x + y - 1) / y 
 	}
+
 
 	def debug(msg : => AnyRef) = { if(showDebug) println(msg.toString) }
 

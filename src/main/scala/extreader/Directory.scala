@@ -6,7 +6,7 @@ object DirectoryFinder {
 		val bytes = fs.bytes
 		scanForDirs(bytes, i => {
 			val d1 = new DirRec( bytes.getFrom( i ) )
-			val d2 = new DirRec( bytes.getFrom( i+d1.length ) )
+			val d2 = new DirRec( bytes.getFrom( i+d1.next ) )
 
 			if( (d2.nameIsDotDot && d1.inodeNum == d2.inodeNum)) {
 				debug("[DirF]\t"+d1 )
@@ -30,7 +30,7 @@ object DirectoryFinder {
 
 			val dir = new DirRec( bytes.getFrom( i ) )
 
-			if(dir.length <= DirRec.maxLength && dir.nameIsDot ) {
+			if(dir.next <= DirRec.maxLength && dir.nameIsDot ) {
 				
 				if( fn(i) )
 					return Some(i)
@@ -44,6 +44,7 @@ object DirectoryFinder {
 
 object Directory {
 	def apply(inode: Inode, name: String) : Directory = {
+		val fs = inode.fs
 		debug("[dir]\tLoading directory: "+name)
 		val dir = new Directory(inode, name)
 		debug("[dir]\t"+inode)
@@ -71,11 +72,11 @@ object Directory {
 						}
 					}
 
-					if(rec.length == 0) {
+					if(rec.next == 0) {
 						valid = false
 						debug("[dir]\tlast record")
 					} else
-						i = i + rec.length
+						i = i + rec.next
 				}
 			}
 		}
@@ -89,13 +90,14 @@ class Directory(val inode: Inode, val name: String) {
 }
 
 object DirRec {
-	val maxLength = (0xFF + 8) // 4 + 2 + 1 + 1 + max(nameLength) 
-	val minLength = 8
+	val structLength = 4 + 2 + 1 + 1
+	val maxLength = structLength + 0xFF // 8+ max(nameLength) 
+	val minLength = structLength + 0 // 8+0
 }
 
 class DirRec(val bytes : Bytes) {
 	def inodeNum = { bytes.get4(0) }
-	def length = { bytes.get2(4) }
+	def next = { bytes.get2(4) }
 	def nameLength = { bytes.get1Int(6)  }
 	def ftype = { bytes.get1Int(7)  }
 	def name = { 
@@ -103,6 +105,10 @@ class DirRec(val bytes : Bytes) {
 		for (i <- 0 until nameLength ) //note: 'until', not 'to'
 			sb append bytes.get1(8+i)
 		sb toString
+	}
+
+	def length = { 
+		align(4, DirRec.structLength + nameLength)
 	}
 
   // faster checks for . and .. than string compare
@@ -114,7 +120,7 @@ class DirRec(val bytes : Bytes) {
 	}
 
 	override def toString = {
-		hex(bytes.trueOffset) +"\t\tinode: "+inodeNum +"\tlen: "+length + "\ttype: " +ftype+ "\tname("+nameLength + "): '"+name+"'"
+		hex(bytes.trueOffset) +"\t\tinode: "+inodeNum +"\tlen: "+next + "/" +length + "\ttype: " +ftype+ "\tname("+nameLength + "): '"+name+"'"
 	}
 
 }
