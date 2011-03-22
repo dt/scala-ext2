@@ -10,3 +10,5 @@ build.xml
 nbproject
 manifest.mf
 dump/
+*.tar.gz
+journal
