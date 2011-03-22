@@ -6,9 +6,27 @@ Ext2 reader and recovery in Scala
 	* sbt
 
 # Running 
+The first argument to Reader must be the filename of ext image.
+Additional options, of the form option=value, may be passed as subsequent arguments
+
 	> sbt reload update compile
 	> sbt
 	> sbt> run ext2fs.dd
+
+Option examples:
+	sbt> run ext3fs.dd grouppad=261 debug=true
+	sbt> run ext2fs.dd metaimage=clean2fs.dd skipjournal=true
+	sbt> run ext2fs.dd finddeleted=true
+
+# Options
+
+* debug=<boolean> enables verbose output
+* blocksize=<num> manually override the blocksize
+* metaimage=<filename> uses filename as a source of metadata (gdts and superblocks)
+* grouppad=<num> offset block numbers in group descriptors by <num>
+* skipjournal=<boolean> do not try to read/dump the journal
+* dumpfiles=<boolean> dump files to disk
+* finddeleted=<boolean> attempt to recovered deleted files
 
 
 # Possible methods of figuring out a trashed FS image
@@ -29,8 +47,7 @@ Currently the FileSystem class can try to load fs metadata (superblock, gdt) fro
 	>	cp <bad image file> <new image file>
 	>	mkfs.ext2 <new image>
 
-	Now point cleanBytes at <new image file> in Reader.scala.
-Otherwise, pass a None for the cleanBytes option.
+	finally, pass "metaimage=<new image>" when running Reader
 
 ## 1.2 Test-and-score
 
