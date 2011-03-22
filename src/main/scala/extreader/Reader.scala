@@ -21,9 +21,10 @@ object Reader {
 		var forceBlocksize = Option.empty[Int]
 		var overrideSB = Option.empty[Long]
 		var groupPad = Option.empty[Int] 
-		var skipJournal = true
+		var skipJournal = false
+		var dumpJournal = false
 		var findDeleted = false
-		var dumpFiles = true
+		var dumpFiles = false
 
 		for(i <- 1 until args.length) {
 			args(i) match {
@@ -41,6 +42,7 @@ object Reader {
 								forceBlocksize = Some(bs)
 						}
 						case "skipjournal" => { skipJournal = v.toBoolean }
+						case "dumpjournal" => { dumpJournal = v.toBoolean }
 						case "finddeleted" => { findDeleted = v.toBoolean }
 						case "dumpfiles" => { dumpFiles = v.toBoolean }
 
@@ -103,10 +105,13 @@ object Reader {
 
 				if ( !skipJournal ) {
 					if( sb.journalEnabled) {
-						print("Dumping journal... ")
+						print("Reading journal... ")
 						val journal = new FsFile(fs.inode(sb.journalInode), "journal")
-						journal.dumpTo(new java.io.File("."))
-						println("done.")
+						if(dumpJournal) {
+							print("dumping journal to disk...")
+							journal.dumpTo(new java.io.File("."))
+							println(" done.")
+						}
 					} else println("Journal not enabled in superblock.")
 				} else println("Skipping journal")
 
