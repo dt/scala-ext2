@@ -43,7 +43,7 @@ object DirectoryFinder {
 }
 
 object Directory {
-	def apply(inode: Inode, name: String) : Directory = {
+	def apply(inode: Inode, name: String, findDeleted: Boolean ) : Directory = {
 		val fs = inode.fs
 		debug("[dir]\tLoading directory: "+name)
 		val dir = new Directory(inode, name)
@@ -63,7 +63,7 @@ object Directory {
 
 						if(child.isDir) {
 							debug("[dir]\trecursing into child dir "+rec.name)
-							dir.subdirs = Directory(child, rec.name) :: dir.subdirs
+							dir.subdirs = Directory(child, rec.name, findDeleted) :: dir.subdirs
 						}
 
 						if(child.isFile) {
@@ -75,8 +75,14 @@ object Directory {
 					if(rec.next == 0) {
 						valid = false
 						debug("[dir]\tlast record")
-					} else
-						i = i + rec.next
+					} else {
+						val missing = ( (rec.length + DirRec.minLength ) <= rec.next )
+						if(findDeleted && missing && false) {
+							//todo: make this work
+						} else {
+							i = i + rec.next
+						}
+					}
 				}
 			}
 		}

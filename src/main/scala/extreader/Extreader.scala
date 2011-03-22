@@ -15,11 +15,15 @@ package object extreader {
 
 	implicit def Long2LongWithRoundUpDiv(x:Long) = new LongWithRoundUpDiv(x) 
 	implicit def Long2LongWithIsPowerOf(x:Long) = new LongWithIsPowerOf(x) 
+	implicit def Char2CharWithIsBit(x:Char) = new CharWithBit(x) 
 
 	class LongWithRoundUpDiv(x:Long) {
 		def /^(y:Long) = (x + y - 1) / y 
 	}
 
+	class CharWithBit(x: Char) {
+			def bit(i: Int) = ((x >> i) & 0x1) 
+	}
 
 	def debug(msg : => AnyRef) = { if(showDebug) println(msg.toString) }
 

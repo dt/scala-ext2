@@ -17,19 +17,33 @@ object Reader {
 
 		val image = new File(args(0))
 
-		var cleanImg:Option[String] = None
-		var overrideSB : Option[Long] = None
-
-		var groupPad = 1
+		var cleanImg = Option.empty[String] 
+		var forceBlocksize = Option.empty[Int]
+		var overrideSB = Option.empty[Long]
+		var groupPad = Option.empty[Int] 
+		var skipJournal = true
+		var findDeleted = false
+		var dumpFiles = true
 
 		for(i <- 1 until args.length) {
 			args(i) match {
 				case Assign(a,v) => {
-					a match {
+					a.toLowerCase match {
 						case "metaimage" => { cleanImg = Some(v) } 
 						case "overrideSB" => { overrideSB = Some(v.toLong) }
 						case "debug" => { extreader.showDebug = v.toBoolean }
-						case "grouppad" => { groupPad = v.toInt}
+						case "grouppad" => { groupPad = Some(v.toInt)}
+						case "blocksize" => {
+							val bs = v.toInt
+							if((bs % 1024) != 0)
+								println("Invalid block size")
+							else 
+								forceBlocksize = Some(bs)
+						}
+						case "skipjournal" => { skipJournal = v.toBoolean }
+						case "finddeleted" => { findDeleted = v.toBoolean }
+						case "dumpfiles" => { dumpFiles = v.toBoolean }
+
 						case _ => { println("Unknown option: '"+a+"'") }
 					}
 				}
@@ -78,7 +92,8 @@ object Reader {
 			case Some(sb) => {
 				println("Loading filesystem...")
 				val fs = new FileSystem(bytes, sb, cleanBytes)
-				fs.groupDescPad = groupPad
+				groupPad.map{ x => fs.groupDescPad = x }
+				forceBlocksize.map{ x => fs.blockSize = x }
 
 				debug("File system info:")
 				debug("\tblock size: "+fs.blockSize)
@@ -86,12 +101,14 @@ object Reader {
 				debug("\tInodes per group: "+fs.inodesPerGroup)
 				debug("\tBlocks per group: "+fs.blocksPerGroup)
 
-				if (sb.journalEnabled) {
-					print("Dumping journal... ")
-					val journal = new FsFile(fs.inode(sb.journalInode), "journal")
-					journal.dumpTo(new java.io.File("."))
-					println("done.")
-				}
+				if ( !skipJournal ) {
+					if( sb.journalEnabled) {
+						print("Dumping journal... ")
+						val journal = new FsFile(fs.inode(sb.journalInode), "journal")
+						journal.dumpTo(new java.io.File("."))
+						println("done.")
+					} else println("Journal not enabled in superblock.")
+				} else println("Skipping journal")
 
 				val rootPos = DirectoryFinder findRootdir fs 
 
@@ -99,10 +116,12 @@ object Reader {
 
 				val rootInode = fs.inode(2)
 
-				val rootDir = Directory(rootInode, "/")
+				val rootDir = Directory(rootInode, "/", findDeleted)
 
 				printTree(rootDir, "")
-				//dumpTree(rootDir, new File("dump"))
+
+				if(dumpFiles) 
+					dumpTree(rootDir, new File("dump"))
 			}
 			case None => {
 				println()

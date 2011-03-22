@@ -28,7 +28,7 @@ class FileSystem(val bytes: Bytes, sb: Superblock, val clean: Option[Bytes]) {
 
 	def groups = blockCount / blocksPerGroup
 
-	def blockSize = 1024 << blockSizeExpo
+	var blockSize = 1024 << blockSizeExpo
 
 	def inodesPerBlock = blockSize / inodeSize
 

@@ -28,11 +28,11 @@ object GroupDesc {
 }
 
 class GroupDesc(val bytes: Bytes) {
-	val blockBitmapBlock = bytes.get4(0)		//bg_block_bitmap
-	val inodeBitmapBlock = bytes.get4(4)		//bg_inode_bitmap
-	val inodeTableFirstBlock = bytes.get4(8)		//bg_inode_table
-	val freeBlocks = bytes.get2(12)		//bg_free_blocks_count
-	val freeInodes = bytes.get2(14)		//bg_free_inodes_count
+	val blockBitmapBlock = bytes.get4(0)			//	bg_block_bitmap
+	val inodeBitmapBlock = bytes.get4(4)			//	bg_inode_bitmap
+	val inodeTableFirstBlock = bytes.get4(8)	//	bg_inode_table
+	val freeBlocks = bytes.get2(12)						//	bg_free_blocks_count
+	val freeInodes = bytes.get2(14)						//	bg_free_inodes_count
 
 	debug("[GD]\tLoading desc...")
 	debug("[GD]\t\t blockBitmapBlock:\t"+blockBitmapBlock )
