@@ -2,22 +2,21 @@ package extreader
 
 
 object InodeFinder {
-		def find ( fs: FileSystem, test: (Long, Inode) => Boolean) = {
+		def find ( fs: FileSystem, test: (Long, Inode) => Boolean): Option[Inode]= {
 		var i = 0
-		var res = List[Inode]()
 		
 		while(i < fs.bytes.length - 127) {
 			val inode = fs.fakeInodeAt(i)
 			
 			try {	
 				if(test(i, inode))
-					res = inode :: res
+					return Some(inode)
 			} catch {
 				case aioobe : ArrayIndexOutOfBoundsException => {}
 			}
 			i += 1
 		}
-		res
+		None
 	}
 }
 
