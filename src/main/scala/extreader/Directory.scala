@@ -61,7 +61,7 @@ object Directory {
 
 					if(rec.inodeNum != inode.num && rec.inodeNum > 0 && !rec.nameIsDot && !rec.nameIsDotDot) {
 						val child = inode.fs.inode(rec.inodeNum)
-						println("[dir "+name+"]\t child inode:"+child)
+						debug("[dir "+name+"]\t child inode:"+child)
 
 						if(child.isDir && child.blockCount < 10) {
 							debug("[dir "+name+"]\trecursing into child dir "+rec.name)
