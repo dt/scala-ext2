@@ -13,6 +13,13 @@ package object extreader {
 	def align(i: Int, d: Int) = (d + d%i)
 	def align(i: Int, d: Long) = (d + d%i)
 
+	def debugOff(block: => Unit) {
+		val oldDebug = showDebug
+		showDebug = false
+		block
+		showDebug = oldDebug
+	}
+
 	implicit def Long2LongWithRoundUpDiv(x:Long) = new LongWithRoundUpDiv(x) 
 	implicit def Long2LongWithIsPowerOf(x:Long) = new LongWithIsPowerOf(x) 
 	implicit def Char2CharWithIsBit(x:Char) = new CharWithBit(x) 
