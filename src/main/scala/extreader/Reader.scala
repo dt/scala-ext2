@@ -103,25 +103,67 @@ object Reader {
 				debug("\tInodes per group: "+fs.inodesPerGroup)
 				debug("\tBlocks per group: "+fs.blocksPerGroup)
 
+				var journal = Option.empty[FsFile]
+
 				if ( !skipJournal ) {
 					if( sb.journalEnabled) {
 						print("Reading journal... ")
-						val journal = new FsFile(fs.inode(sb.journalInode), "journal")
+						val ji = fs.inode(sb.journalInode)
+						val jfile = new FsFile(ji, "journal")
+						journal = Some(jfile)
+						
+						println("Journal blocks (min/max): " + 
+							ji.blockNums.min + " - " +ji.blockNums.max )
+
 						if(dumpJournal) {
 							print("dumping journal to disk...")
-							journal.dumpTo(new java.io.File("."))
+							jfile.dumpTo(new java.io.File("."))
 							println(" done.")
 						}
 					} else println("Journal not enabled in superblock.")
 				} else println("Skipping journal")
 
-				val rootPos = DirectoryFinder findRootdir fs 
+				//val rootPos = DirectoryFinder findRootdir fs 
 
-				debug(rootPos)
+				//debug(rootPos)
+
+				val homeInode = 3841
+
+				debugOff {
+
+				DirectoryFinder find (fs , { 
+					i => {
+						val d1 = new DirRec( bytes.getFrom( i ) )
+						val d2 = new DirRec( bytes.getFrom( i+d1.next ) )
+
+						if( (d2.nameIsDotDot && d1.inodeNum == homeInode && d2.inodeNum == 2)) {
+							val block = i/fs.blockSize
+							if(journal.exists{ x => x.inode.blockNums.contains(block) })
+								println("Found contents in journal block: "+block )
+							else
+								println("Found contents in block: "+block )							
+						}
+						false
+				}})
+
+				val homeBlock = 22017
+
+				InodeFinder find (fs, {(pos, inode) => 
+					if(inode.blockNum(0) == homeBlock && inode.isDir) {
+						println("Found inode: "+inode)
+						println(" in block "+pos/fs.blockSize)
+					}
+					false
+				})
+					
+				}
 
 				val rootInode = fs.inode(2)
 
-				val rootDir = Directory(rootInode, "/", findDeleted)
+				val rootDir = Directory(rootInode, "/")
+
+				println("File system contents: ")
+				println("")
 
 				printTree(rootDir, "")
 

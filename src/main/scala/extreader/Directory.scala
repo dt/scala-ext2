@@ -4,7 +4,7 @@ object DirectoryFinder {
 
 	def findRootdir(fs : FileSystem) : Option[Int] = {
 		val bytes = fs.bytes
-		scanForDirs(bytes, i => {
+		find(fs, i => {
 			val d1 = new DirRec( bytes.getFrom( i ) )
 			val d2 = new DirRec( bytes.getFrom( i+d1.next ) )
 
@@ -24,11 +24,11 @@ object DirectoryFinder {
   /**
   	Will invoke fn on each 
   */
-	def scanForDirs(bytes : Bytes, fn : Int => Boolean) : Option[Int] = {
+	def find(fs: FileSystem, fn : Int => Boolean) : Option[Int] = {
 		var i = 0
-		while(i < bytes.length - DirRec.minLength) {
+		while(i < fs.bytes.length - DirRec.minLength) {
 
-			val dir = new DirRec( bytes.getFrom( i ) )
+			val dir = new DirRec( fs.bytes.getFrom( i ) )
 
 			if(dir.next <= DirRec.maxLength && dir.nameIsDot ) {
 				
@@ -43,7 +43,7 @@ object DirectoryFinder {
 }
 
 object Directory {
-	def apply(inode: Inode, name: String, findDeleted: Boolean ) : Directory = {
+	def apply(inode: Inode, name: String ) : Directory = {
 		val fs = inode.fs
 		debug("[dir]\tLoading directory: "+name)
 		val dir = new Directory(inode, name)
@@ -56,33 +56,31 @@ object Directory {
 				while(valid && i < block.length - DirRec.minLength) {
 					val rec = new DirRec( block.getFrom(i) )
 					
-					debug("[dir] Processing: "+rec)
+					debug("[dir]\tProcessing: "+rec)
 
 					if(rec.inodeNum != inode.num && rec.inodeNum > 0 && !rec.nameIsDot && !rec.nameIsDotDot) {
 						val child = inode.fs.inode(rec.inodeNum)
+						println("[dir]\t"+child)
 
 						if(child.isDir) {
 							debug("[dir]\trecursing into child dir "+rec.name)
-							dir.subdirs = Directory(child, rec.name, findDeleted) :: dir.subdirs
+							dir.subdirs = Directory(child, rec.name) :: dir.subdirs
 						}
 
 						if(child.isFile) {
 							debug("[dir]\tAdding file "+rec.name)
 							dir.files = new FsFile(child, rec.name) :: dir.files
 						}
+
+
 					}
 
 					if(rec.next == 0) {
 						valid = false
 						debug("[dir]\tlast record")
-					} else {
-						val missing = ( (rec.length + DirRec.minLength ) <= rec.next )
-						if(findDeleted && missing && false) {
-							//todo: make this work
-						} else {
-							i = i + rec.next
-						}
-					}
+					} else
+						i = i + rec.next
+					
 				}
 			}
 		}
