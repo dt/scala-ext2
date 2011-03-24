@@ -161,7 +161,10 @@ object Reader {
 
 
 				if(buildDirTree) {
-					extractDirTree(fs)
+					print("Looking through FS for dirs... ")
+					val inodeLinks = extractDirTree(fs)
+					println(" done.")
+					printRawTree(2, "", inodeLinks)
 				}	
 
 
@@ -192,12 +195,19 @@ object Reader {
 	}
 
 	def extractDirTree(fs:FileSystem) = {
-		val parents = collection.mutable.Map[Long, Long]()
+		val dirs = collection.mutable.Map[Long, List[Long]]()
 
-		DirectoryFinder find(fs, (startBlock, self, parent) => {
-			parents += ( (self.inodeNum, parent.inodeNum) )
+		debugOff{ DirectoryFinder find(fs, (startBlock, self, parent) => {
+			if(self.inodeNum != 2) {
+				dirs.update(parent.inodeNum, 
+					self.inodeNum :: dirs.getOrElse(parent.inodeNum, List.empty[Long])) 
+			}
+
 			false
-		})		
+		})}
+
+		dirs
+
 	}
 
 	def scanDirRec(fs:FileSystem) = {
@@ -235,6 +245,13 @@ object Reader {
 
 		for(file <- root.files) {
 			println(prefix+" - "+file.name)
+		}
+	}
+
+	def printRawTree(idx:Long, prefix: String, inodes: collection.Map[Long, List[Long]]) {
+		println(prefix + idx)
+		for( child <- inodes.getOrElse(idx, List.empty[Long]).distinct.sorted ) {
+			printRawTree(child, prefix+"  ", inodes)
 		}
 	}
 
