@@ -52,7 +52,7 @@ class Group(fs: FileSystem, val num: Long, desc: GroupDesc) {
 	def freeInodes = desc.freeInodes 
 
 	def inodeBytes(inodeIndexInGroup: Long): Bytes = {
-		debug("[Group]\tLocation of "+inodeIndexInGroup+" inode in group "+num+"...")
+		debug("[Group]\tInode at offset "+inodeIndexInGroup+" in group "+num+"...")
 		val blockOffset = inodeIndexInGroup / fs.inodesPerBlock
 		val blockNum = inodeTableFirstBlock + blockOffset
 

@@ -132,7 +132,7 @@ class Inode(val fs : FileSystem, val num: Long, val bytes: Bytes) {
 			}
 			i = i + 1
 		}
-		debug("[inode]\tDone reading block numberss...")
+		debug("[inode]\tDone reading block numbers...")
 		blocks reverse
 		
 	}
