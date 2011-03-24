@@ -26,7 +26,8 @@ object Reader {
 		var parseJournal = false
 		var findDeleted = false
 		var dumpFiles = false
-		var buildDirTree = false
+		var extractDirTree = false
+		var loadTree = true
 
 		for(i <- 1 until args.length) {
 			args(i) match {
@@ -48,7 +49,8 @@ object Reader {
 						case "parsejournal" => { parseJournal = v.toBoolean }
 						case "finddeleted" => { findDeleted = v.toBoolean }
 						case "dumpfiles" => { dumpFiles = v.toBoolean }
-						case "builddirtree" => { buildDirTree = v.toBoolean }
+						case "loadTree"	=> { loadTree = v.toBoolean }
+						case "extractdirtree" => { extractDirTree = v.toBoolean }
 
 						case _ => { println("Unknown option: '"+a+"'") }
 					}
@@ -160,23 +162,26 @@ object Reader {
 				//println(badInode.blockNums)
 
 
-				if(buildDirTree) {
+				if(extractDirTree) {
 					print("Looking through FS for dirs... ")
-					val inodeLinks = extractDirTree(fs)
+					val inodeLinks = extractDirInodeTree(fs)
 					println(" done.")
 					printRawTree(2, "", inodeLinks)
 				}	
 
+				if(loadTree) {
+					print("Loading fs tree...")
+					val rootDir = Directory(rootInode, "/")
+					println(" done.")
 
-				//val rootDir = Directory(rootInode, "/")
+					println("File system contents: ")
+					println("")
 
-				//println("File system contents: ")
-				//println("")
+					printTree(rootDir, "")
 
-				//printTree(rootDir, "")
-
-				//if(dumpFiles) 
-				//	dumpTree(rootDir, new File("dump"))
+					if(dumpFiles) 
+						dumpTree(rootDir, new File("dump"))
+				}
 			}
 			case None => {
 				println()
@@ -194,7 +199,7 @@ object Reader {
 		}
 	}
 
-	def extractDirTree(fs:FileSystem) = {
+	def extractDirInodeTree(fs:FileSystem) = {
 		val dirs = collection.mutable.Map[Long, List[Long]]()
 
 		debugOff{ DirectoryFinder find(fs, (startBlock, self, parent) => {
@@ -210,7 +215,7 @@ object Reader {
 
 	}
 
-	def scanDirRec(fs:FileSystem) = {
+	def scanDirRecs(fs:FileSystem) = {
 
 		DirectoryFinder find(fs, (startBlock, self, parent) => {
 			var blockNum = startBlock num
