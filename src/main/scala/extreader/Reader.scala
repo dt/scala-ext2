@@ -80,7 +80,7 @@ object Reader {
 		if(guessBlockSize) {
 			println("Attempting to guess block size...")
 			BlockSizeGuesser search bytes
-			println()
+			return 0;
 		}
 
 		val superblock: Option[Superblock] = overrideSB match {
@@ -111,100 +111,109 @@ object Reader {
 
 		println("")
 
-		superblock match {
-			case Some(sb) => {
-				println("Loading filesystem...")
-				val fs = new FileSystem(bytes, sb, cleanBytes)
-				groupPad.map{ x => fs.groupDescPad = x }
-				forceBlocksize.map{ x => fs.blockSize = x }
+		if(superblock.isEmpty) {
+			println()
+			println(Console.RED + "No superblock: " + Console.WHITE)
+			println()
 
-				debug("File system info:")
-				debug("\tblock size: "+fs.blockSize)
-				debug("\tinode size: "+fs.inodeSize)
-				debug("\tInodes per group: "+fs.inodesPerGroup)
-				debug("\tBlocks per group: "+fs.blocksPerGroup)
-
-				var journalFile = Option.empty[FsFile]
-
-				if ( !skipJournal ) {
-					if( sb.journalEnabled) {
-						println("Reading journal...")
-						val journalContent = new FsFile(fs.inode(sb.journalInode), "journal")
-						journalFile = Some(journalContent)
-						if (dumpJournal || parseJournal) {
-							print("\t* Dumping to disk...")
-							debugOff { journalContent.dumpTo(new File(".")) }
-							println(" done.")
-						}
-						if (parseJournal) {
-							print("\t* Parsing...")
-
-							val journal = debugOff {
-								new Journal(Bytes.fromFile(new File("journal")))
-							}
-
-							println(" done.")
-							debug("Journal info:")
-							debug(String.format("\tsuperblock header signature: 0x%x", 
-								journal.sb.header.signature.asInstanceOf[AnyRef]))
-							debug("\tblock size: " + journal.blockSize)
-							debug("\tblock count: " + journal.blockCount)
-
-						}
-
-						if (parseJournal)
-							return 0;
-					} else println("Journal not enabled in superblock.")
-				} else println("Skipping journal")
-
-				//val rootPos = DirectoryFinder findRootdir fs 
-
-				//debug(rootPos)
-
-				var rawDirTree = Option.empty[InodeParents]
-
-				if(extractDirTree) {
-					print("Looking through FS for dirs... ")
-					val inodeLinks = extractDirInodeTree(fs)
-					rawDirTree = Some(inodeLinks)
-					println(" done.")
-					printRawTree(2, "", inodeLinks)
-				}	
-
-				if(loadTree) {
-					print("Loading fs tree...")
-					val rootDir = Directory(fs.inode(2), "/")
-					println(" done.")
-
-					println("File system contents: ")
-					println("")
-
-					printTree(rootDir, "")
-
-					if(dumpFiles) 
-						dumpTree(rootDir, new File("dump"))
-				}
+			println("\t* Provide a alternate location in image: overrideSB=<pos>")
+			println("\t* Provide a alternate image for metadata: metaimage=<metaimg>")
+			println()
+			println("Would you like to search for possible superblocks? (y/n)")
+			if( Console readBoolean ) {
+				SuperblockFinder search bytes 
 			}
-			case None => {
-				println()
-				println(Console.RED + "No superblock: " + Console.WHITE)
-				println()
+			return 0;
+		}
 
-				println("\t* Provide a alternate location in image: overrideSB=<pos>")
-				println("\t* Provide a alternate image for metadata: metaimage=<metaimg>")
-				println()
-				println("Would you like to search for possible superblocks? (y/n)")
-				if( Console readBoolean ) {
-					SuperblockFinder search bytes 
+		val sb = superblock.get
+		println("Loading filesystem...")
+		val fs = new FileSystem(bytes, sb, cleanBytes)
+		groupPad.map{ x => fs.groupDescPad = x }
+		forceBlocksize.map{ x => fs.blockSize = x }
+
+		debug("File system info:")
+		debug("\tblock size: "+fs.blockSize)
+		debug("\tinode size: "+fs.inodeSize)
+		debug("\tInodes per group: "+fs.inodesPerGroup)
+		debug("\tBlocks per group: "+fs.blocksPerGroup)
+
+		var journalFile = Option.empty[FsFile]
+
+		if ( !skipJournal ) {
+			if( sb.journalEnabled) {
+				println("Reading journal...")
+				val journalContent = new FsFile(fs.inode(sb.journalInode), "journal")
+				journalFile = Some(journalContent)
+				if (dumpJournal || parseJournal) {
+					print("\t* Dumping to disk...")
+					debugOff { journalContent.dumpTo(new File(".")) }
+					println(" done.")
 				}
-			}
+				if (parseJournal) {
+					print("\t* Parsing...")
+
+					val journal = debugOff {
+						new Journal(Bytes.fromFile(new File("journal")))
+					}
+
+					println(" done.")
+					debug("Journal info:")
+					debug(String.format("\tsuperblock header signature: 0x%x", 
+						journal.sb.header.signature.asInstanceOf[AnyRef]))
+					debug("\tblock size: " + journal.blockSize)
+					debug("\tblock count: " + journal.blockCount)
+
+				}
+
+				if (parseJournal)
+					return 0;
+			} else println("Journal not enabled in superblock.")
+		} else println("Skipping journal")
+
+		//val rootPos = DirectoryFinder findRootdir fs 
+
+		//debug(rootPos)
+
+		var rawDirTree = Option.empty[InodeParents]
+
+		if(extractDirTree) {
+			print("Looking through FS for dirs... ")
+			val (inode2block, block2inode, inodeLinks) = extractDirInodeTree(fs)
+			rawDirTree = Some(inodeLinks)
+			println(" done.")
+			printRawTree(2, "", inodeLinks)
+
+			println("search for inodes which point to blocks...")
+
+			InodeFinder find (fs, (x, y) => false)
+		}	
+
+		if(loadTree) {
+			print("Loading fs tree...")
+			val rootDir = Directory(fs.inode(2), "/")
+			println(" done.")
+
+			println("File system contents: ")
+			println("")
+
+			printTree(rootDir, "")
+
+			if(dumpFiles) 
+				dumpTree(rootDir, new File("dump"))
 		}
 	}
+	
 
 	def extractDirInodeTree(fs:FileSystem) = {
 		val dirs = collection.mutable.Map[Long, List[Long]]()
+		val inode2block = collection.mutable.Map[Long, Block]()
+		val block2inode = collection.mutable.Map[Block, Long]()
 
 		debugOff{ DirectoryFinder find(fs, (startBlock, self, parent) => {
+			inode2block += ((self.inodeNum, startBlock))
+			block2inode += ((startBlock, self.inodeNum))
+
 			if(self.inodeNum != 2) {
 				dirs.update(parent.inodeNum, 
 					self.inodeNum :: dirs.getOrElse(parent.inodeNum, List.empty[Long])) 
@@ -213,7 +222,7 @@ object Reader {
 			false
 		})}
 
-		dirs
+		( inode2block, block2inode, dirs)
 
 	}
 
