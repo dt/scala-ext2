@@ -1,12 +1,15 @@
 package extreader
 
 import java.io.File
+
 /*
 	Some inspiration taken from jNode's EXT2 implementation
 	http://gitorious.org/jnode/svn-mirror/trees/master/fs/src/fs/org/jnode/fs/ext2
 */
 
 object Reader { 
+	type InodeParents = collection.Map[Long, List[Long]]
+	
 	def main(args: Array[String]) { 
 		if(args.length < 1) {
 			println("image name must be first argument")
@@ -28,6 +31,7 @@ object Reader {
 		var dumpFiles = false
 		var extractDirTree = false
 		var loadTree = true
+		var guessBlockSize = false
 
 		for(i <- 1 until args.length) {
 			args(i) match {
@@ -51,6 +55,7 @@ object Reader {
 						case "dumpfiles" => { dumpFiles = v.toBoolean }
 						case "loadtree"	=> { loadTree = v.toBoolean }
 						case "extractdirtree" => { extractDirTree = v.toBoolean }
+						case "guessblocksize" => { guessBlockSize = v.toBoolean }
 
 						case _ => { println("Unknown option: '"+a+"'") }
 					}
@@ -69,6 +74,14 @@ object Reader {
 			println("Loading alternate metadata image: "+cleanFile) 
 			Bytes fromFile (new File(cleanFile)) 
 		}}
+		println()
+
+
+		if(guessBlockSize) {
+			println("Attempting to guess block size...")
+			BlockSizeGuesser search bytes
+			println()
+		}
 
 		val superblock: Option[Superblock] = overrideSB match {
 			case Some(pos) => {
@@ -95,6 +108,8 @@ object Reader {
 				}}
 			}
 		}
+
+		println("")
 
 		superblock match {
 			case Some(sb) => {
@@ -146,9 +161,12 @@ object Reader {
 
 				//debug(rootPos)
 
+				var rawDirTree = Option.empty[InodeParents]
+
 				if(extractDirTree) {
 					print("Looking through FS for dirs... ")
 					val inodeLinks = extractDirInodeTree(fs)
+					rawDirTree = Some(inodeLinks)
 					println(" done.")
 					printRawTree(2, "", inodeLinks)
 				}	
@@ -237,7 +255,7 @@ object Reader {
 		}
 	}
 
-	def printRawTree(idx:Long, prefix: String, inodes: collection.Map[Long, List[Long]]) {
+	def printRawTree(idx:Long, prefix: String, inodes: InodeParents) {
 		println(prefix + idx)
 		for( child <- inodes.getOrElse(idx, List.empty[Long]).distinct.sorted ) {
 			printRawTree(child, prefix+"  ", inodes)

@@ -2,15 +2,31 @@ package extreader
 
 object DirectoryFinder {
 
-	def findRootdir(fs : FileSystem) : Option[Block] = {
-		val bytes = fs.bytes
-		find(fs, block => {
-			val d1 = new DirRec( block )
-			val d2 = new DirRec( block.getFrom( d1.next ) )
+	/**
+		Similar to findRootdir, but does not use blocks	
+	*/ 
+	def rawFindRootdir(bytes: Bytes) : Option[Long] = {
+		var i = 0L
+		while(i < bytes.length - 1024) {
+			val self = new DirRec( bytes.getFrom(i) )
+			if(self.nameIsDot && self.inodeNum==2 && self.next>0 && self.next<20) {
+				val parent = new DirRec( bytes.getFrom(i + self.next) )
+				if(parent.nameIsDotDot && parent.inodeNum == 2) {
+					return(Some(i))
+				}
+			}
+			i+=1
+		}
+		None
+	}
 
-			if( d1.inodeNum == d2.inodeNum ) {
-				debug("[DirF]\t"+d1 )
-				debug("[DirF]\t"+d2 )
+	def findRootdir(fs: FileSystem) : Option[Block] = {
+		val bytes = fs.bytes
+		find(fs, (block, self, parent) => {
+
+			if( self.inodeNum == parent.inodeNum ) {
+				debug("[DirF]\t"+self )
+				debug("[DirF]\t"+parent )
 				true
 			} else
 				false
