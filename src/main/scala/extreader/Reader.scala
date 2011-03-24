@@ -23,6 +23,7 @@ object Reader {
 		var groupPad = Option.empty[Int] 
 		var skipJournal = false
 		var dumpJournal = false
+		var parseJournal = false
 		var findDeleted = false
 		var dumpFiles = false
 
@@ -43,6 +44,7 @@ object Reader {
 						}
 						case "skipjournal" => { skipJournal = v.toBoolean }
 						case "dumpjournal" => { dumpJournal = v.toBoolean }
+						case "parsejournal" => { parseJournal = v.toBoolean }
 						case "finddeleted" => { findDeleted = v.toBoolean }
 						case "dumpfiles" => { dumpFiles = v.toBoolean }
 
@@ -105,11 +107,21 @@ object Reader {
 
 				if ( !skipJournal ) {
 					if( sb.journalEnabled) {
-						print("Reading journal... ")
-						val journal = new FsFile(fs.inode(sb.journalInode), "journal")
-						if(dumpJournal) {
-							print("dumping journal to disk...")
-							journal.dumpTo(new java.io.File("."))
+						println("Reading journal...")
+						val journalContent = new FsFile(fs.inode(sb.journalInode), "journal")
+						if (parseJournal) {
+							print("\t* Parsing...")
+							val journal = new Journal(journalContent.inode.bytes)
+							println(" done.")
+							debug("Journal info:")
+							debug("\tsuperblock header signature: " + journal.sb.header.signature)
+							debug("\tblock size: " + journal.blockSize)
+							debug("\tblock count: " + journal.blockCount)
+
+						}
+						if (dumpJournal) {
+							print("\t* Dumping to disk...")
+							journalContent.dumpTo(new java.io.File("."))
 							println(" done.")
 						}
 					} else println("Journal not enabled in superblock.")

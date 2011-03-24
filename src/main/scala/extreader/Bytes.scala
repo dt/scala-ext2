@@ -4,7 +4,9 @@ import java.io.{FileInputStream, File, OutputStream}
 
 trait Bytes {
 	def get4(offset : Long ) : Long
-	def get2(offset : Long ) : Int
+  def get4BE(offset : Long ) : Long
+  def get2(offset : Long ) : Int
+  def get2BE(offset : Long ) : Int
 	def get1(offset : Long ) : Char
 
   def get1Int(offset : Long ) : Int
@@ -62,8 +64,14 @@ class ByteArrayWrapper( val data : Array[Char] ) extends Bytes {
   def get4( offset : Long ) : Long =
   	make4(data(offset+3),data(offset+2),data(offset+1), data(offset))
 
+  def get4BE(offset: Long): Long =
+    make4(data(offset),data(offset+1),data(offset+2), data(offset+3))
+
   def get2( offset : Long ) : Int =
   	make2(data(offset+1),data(offset))
+
+  def get2BE( offset : Long ) : Int =
+    make2(data(offset),data(offset+1))
 
   def get1 ( offset : Long ) : Char =
     lim( data(offset) )
@@ -105,7 +113,11 @@ class BytesWrapper(val data: Bytes) extends Bytes {
 
   def get4( offset : Long )  = data.get4(offset)
 
+  def get4BE( offset : Long )  = data.get4BE(offset)
+
   def get2( offset : Long ) = data.get2(offset)
+
+  def get2BE( offset : Long )  = data.get2BE(offset)
 
   def get1( offset : Long ) = data.get1(offset)
 
@@ -131,7 +143,11 @@ class BytesWithOffet( val data: Bytes, base : Long) extends Bytes {
 
 	def get4( offset : Long )  = data.get4(offset + base)
 
-	def get2( offset : Long ) = data.get2(offset + base )
+  def get4BE( offset : Long )  = data.get4BE(offset + base)
+
+  def get2( offset : Long ) = data.get2(offset + base )
+
+	def get2BE( offset : Long ) = data.get2BE(offset + base )
 
   def get1( offset : Long ) = data.get1(offset + base )
 
@@ -157,7 +173,11 @@ class ByteRange (val data : Bytes, base : Long, count : Long ) extends Bytes {
 
 	def get4( offset : Long )  = data.get4(check(offset + base))
 
-	def get2( offset : Long ) = data.get2(check(offset + base ))
+  def get4BE( offset : Long )  = data.get4BE(check(offset + base))
+
+  def get2( offset : Long ) = data.get2(check(offset + base ))
+
+	def get2BE( offset : Long ) = data.get2BE(check(offset + base ))
 
   def get1( offset : Long ) = data.get1(check(offset + base ))
 
