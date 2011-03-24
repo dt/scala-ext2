@@ -13,11 +13,12 @@ package object extreader {
 	def align(i: Int, d: Int) = (d + d%i)
 	def align(i: Int, d: Long) = (d + d%i)
 
-	def debugOff(block: => Unit) {
+	def debugOff[T](block: => T) = {
 		val oldDebug = showDebug
 		showDebug = false
-		block
+		val result = block
 		showDebug = oldDebug
+		result
 	}
 
 	implicit def Long2LongWithRoundUpDiv(x:Long) = new LongWithRoundUpDiv(x) 
