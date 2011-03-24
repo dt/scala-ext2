@@ -49,7 +49,7 @@ object Reader {
 						case "parsejournal" => { parseJournal = v.toBoolean }
 						case "finddeleted" => { findDeleted = v.toBoolean }
 						case "dumpfiles" => { dumpFiles = v.toBoolean }
-						case "loadTree"	=> { loadTree = v.toBoolean }
+						case "loadtree"	=> { loadTree = v.toBoolean }
 						case "extractdirtree" => { extractDirTree = v.toBoolean }
 
 						case _ => { println("Unknown option: '"+a+"'") }
@@ -146,22 +146,6 @@ object Reader {
 
 				//debug(rootPos)
 
-				println("loading root inode")	
-				val rootInode = fs.inode(2)
-				println(rootInode)
-				println(rootInode.blockNums)
-
-				println("loading home inode")
-				val homeInode = fs.inode(3841)
-				println(homeInode)
-				println(homeInode.blockNums)
-
-				println("loading broken inode")
-				val badInode = fs.inode(3849)
-				println(badInode)
-				//println(badInode.blockNums)
-
-
 				if(extractDirTree) {
 					print("Looking through FS for dirs... ")
 					val inodeLinks = extractDirInodeTree(fs)
@@ -171,7 +155,7 @@ object Reader {
 
 				if(loadTree) {
 					print("Loading fs tree...")
-					val rootDir = Directory(rootInode, "/")
+					val rootDir = Directory(fs.inode(2), "/")
 					println(" done.")
 
 					println("File system contents: ")
