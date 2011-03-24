@@ -8,6 +8,11 @@ class Journal(bytes: Bytes) {
 	def firstJournalBlock = sb.firstJournalBlock
 	def firstSeqNum = sb.firstSeqNum
 	def firstTransBlock = sb.firstTransBlock
+
+	def block(num: Long) = {
+		val offset = num * sb.blockSize
+		bytes.getRange(offset, sb.blockSize)
+	}
 }
 
 

@@ -111,8 +111,9 @@ object Reader {
 					if( sb.journalEnabled) {
 						println("Reading journal...")
 						val journalContent = new FsFile(fs.inode(sb.journalInode), "journal")
-						journalFile = Some(journalContent)
-						if (dumpJournal || parseJournal) {
+						val journalFile = new File("journal")
+
+						if (dumpJournal || (parseJournal && !journalFile.exists)) {
 							print("\t* Dumping to disk...")
 							debugOff { journalContent.dumpTo(new File(".")) }
 							println(" done.")
@@ -130,7 +131,16 @@ object Reader {
 								journal.sb.header.signature.asInstanceOf[AnyRef]))
 							debug("\tblock size: " + journal.blockSize)
 							debug("\tblock count: " + journal.blockCount)
+							debug("\tfirst journal block: " + journal.firstJournalBlock)
+							debug("\tfirst sequence number: " + journal.firstSeqNum)
+							debug("\tfirst transaction block: " + journal.firstTransBlock)
 
+							val block = new JournalDescriptor(journal.block(journal.firstJournalBlock))
+							debug("First block:")
+							debug("\ttype: " + block.header.blockType)
+
+							debug("\tfs block: " + block.fsBlock)
+							debug("\tflags: " + block.flags)
 						}
 
 						if (parseJournal)
