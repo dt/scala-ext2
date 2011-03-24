@@ -44,9 +44,10 @@ class GroupDesc(val bytes: Bytes) {
 }
 
 class Group(fs: FileSystem, val num: Long, desc: GroupDesc) {
-	def blockBitmapBlock = desc.blockBitmapBlock + fs.groupDescPad
-	def inodeBitmapBlock = desc.inodeBitmapBlock + fs.groupDescPad
-	def inodeTableFirstBlock = desc.inodeTableFirstBlock + fs.groupDescPad
+	val pad = { if(num < fs.padGroupBelow) fs.groupDescPad else 0 }
+	def blockBitmapBlock = desc.blockBitmapBlock + pad
+	def inodeBitmapBlock = desc.inodeBitmapBlock + pad
+	def inodeTableFirstBlock = desc.inodeTableFirstBlock + pad
 	def freeBlocks = desc.freeBlocks 
 	def freeInodes = desc.freeInodes 
 

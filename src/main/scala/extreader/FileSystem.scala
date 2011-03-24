@@ -12,6 +12,8 @@ class FileSystem(val bytes: Bytes, sb: Superblock, val clean: Option[Bytes]) {
 	val inodeCache = collection.mutable.Map[Long, Inode]()
 
 	var groupDescPad = 0
+	var padGroupBelow = 1
+
 
 	def blockSizeExpo = sb.logBlockSize
 
