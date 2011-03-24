@@ -23,6 +23,7 @@ object Reader {
 		var groupPad = Option.empty[Int] 
 		var skipJournal = false
 		var dumpJournal = false
+		var parseJournal = false
 		var findDeleted = false
 		var dumpFiles = false
 
@@ -43,6 +44,7 @@ object Reader {
 						}
 						case "skipjournal" => { skipJournal = v.toBoolean }
 						case "dumpjournal" => { dumpJournal = v.toBoolean }
+						case "parsejournal" => { parseJournal = v.toBoolean }
 						case "finddeleted" => { findDeleted = v.toBoolean }
 						case "dumpfiles" => { dumpFiles = v.toBoolean }
 
@@ -103,21 +105,27 @@ object Reader {
 				debug("\tInodes per group: "+fs.inodesPerGroup)
 				debug("\tBlocks per group: "+fs.blocksPerGroup)
 
-				var journal = Option.empty[FsFile]
+				var journalFile = Option.empty[FsFile]
 
 				if ( !skipJournal ) {
 					if( sb.journalEnabled) {
-						print("Reading journal... ")
-						val ji = fs.inode(sb.journalInode)
-						val jfile = new FsFile(ji, "journal")
-						journal = Some(jfile)
-						
-						println("Journal blocks (min/max): " + 
-							ji.blockNums.min + " - " +ji.blockNums.max )
+						println("Reading journal...")
+						val journalContent = new FsFile(fs.inode(sb.journalInode), "journal")
+						journalFile = Some(journalContent)
+						if (parseJournal) {
+							print("\t* Parsing...")
+							val journal = new Journal(journalContent.inode.bytes)
 
-						if(dumpJournal) {
-							print("dumping journal to disk...")
-							jfile.dumpTo(new java.io.File("."))
+							println(" done.")
+							debug("Journal info:")
+							debug("\tsuperblock header signature: " + journal.sb.header.signature)
+							debug("\tblock size: " + journal.blockSize)
+							debug("\tblock count: " + journal.blockCount)
+
+						}
+						if (dumpJournal) {
+							print("\t* Dumping to disk...")
+							journalContent.dumpTo(new java.io.File("."))
 							println(" done.")
 						}
 					} else println("Journal not enabled in superblock.")
@@ -138,7 +146,7 @@ object Reader {
 
 						if( (d2.nameIsDotDot && d1.inodeNum == homeInode && d2.inodeNum == 2)) {
 							val block = i/fs.blockSize
-							if(journal.exists{ x => x.inode.blockNums.contains(block) })
+							if(journalFile.exists{ x => x.inode.blockNums.contains(block) })
 								println("Found contents in journal block: "+block )
 							else
 								println("Found contents in block: "+block )							
