@@ -1,9 +1,8 @@
 package extreader
 
 
-object Inode {
-
-	def findAllBy( fs: FileSystem, test: Inode => Boolean) = {
+object InodeFinder {
+		def find ( fs: FileSystem, test: (Long, Inode) => Boolean) = {
 		var i = 0
 		var res = List[Inode]()
 		
@@ -11,7 +10,7 @@ object Inode {
 			val inode = fs.fakeInodeAt(i)
 			
 			try {	
-				if(test(inode))
+				if(test(i, inode))
 					res = inode :: res
 			} catch {
 				case aioobe : ArrayIndexOutOfBoundsException => {}
@@ -20,31 +19,9 @@ object Inode {
 		}
 		res
 	}
-
-	def findByFirstBlockNum( fs: FileSystem, num: Int , test: Inode => Boolean) = {
-		var i = 0
-		var res : Option[Inode] = None
-		while(i < fs.bytes.length - 4 && res.isEmpty) {
-			if( fs.bytes.get4(i) == num ) {
-				val inode = fs.fakeInodeAt(i-Inode.firstBlock)
-				
-				if(inode looksLikeDir) debug(inode)
-				
-				if(test(inode))
-					res = Some(inode)
-			}
-			i += 1
-
-		}
-		res
-	}
-
-	val firstBlock = 40
 }
 
-
 import util.control.Breaks._
-
 
 class Inode(val fs : FileSystem, val num: Long, val bytes: Bytes) {
 	/**
@@ -88,7 +65,7 @@ class Inode(val fs : FileSystem, val num: Long, val bytes: Bytes) {
 	val tripleIndirectsPerBlock = indirectsPerBlock * indirectsPerBlock * indirectsPerBlock
 
 
-	def numberOfBlock(localBlockIndex: Int): BlockNum = {
+	def blockNum(localBlockIndex: Int): BlockNum = {
 		
 		if( localBlockIndex < 12) { // blocks 0 - 11
 			debug("[inode]\tblock "+localBlockIndex+" is direct")
@@ -137,27 +114,31 @@ class Inode(val fs : FileSystem, val num: Long, val bytes: Bytes) {
 		}
 	}
 
-	def blocks = {
-		debug("[inode]\tReading blocks...")
-		var blocks = List[Block]()
+	lazy val blockNums = {
+
+		debug("[inode]\tReading block numbers...")
+		var blocks = List[BlockNum]()
 		var i = 0
 		var valid = true
 		while (i < blockCount && valid) {
 
-			val blockNum = numberOfBlock(i)
-			debug("[inode]\t\t"+i+" -> "+blockNum)
+			val bNum = blockNum(i)
+			debug("[inode]\t\t"+i+" -> "+bNum)
 
-			if(blockNum > 0) {
-				blocks = fs.block(blockNum) :: blocks
+			if(bNum > 0) {
+				blocks = bNum :: blocks
 			} else {
 				valid = false
 			}
 			i = i + 1
 		}
-		debug("[inode]\tDone reading blocks...")
+		debug("[inode]\tDone reading block numberss...")
 		blocks reverse
 		
 	}
+
+	def blocks = { blockNums map {x => fs.block(x) } }
+
 
 /*
 	// First try -- 
