@@ -114,22 +114,29 @@ object Reader {
 						println("Reading journal...")
 						val journalContent = new FsFile(fs.inode(sb.journalInode), "journal")
 						journalFile = Some(journalContent)
+						if (dumpJournal || parseJournal) {
+							print("\t* Dumping to disk...")
+							debugOff { journalContent.dumpTo(new File(".")) }
+							println(" done.")
+						}
 						if (parseJournal) {
 							print("\t* Parsing...")
-							val journal = new Journal(journalContent.inode.bytes)
+
+							val journal = debugOff {
+								new Journal(Bytes.fromFile(new File("journal")))
+							}
 
 							println(" done.")
 							debug("Journal info:")
-							debug("\tsuperblock header signature: " + journal.sb.header.signature)
+							debug(String.format("\tsuperblock header signature: 0x%x", 
+								journal.sb.header.signature.asInstanceOf[AnyRef]))
 							debug("\tblock size: " + journal.blockSize)
 							debug("\tblock count: " + journal.blockCount)
 
 						}
-						if (dumpJournal) {
-							print("\t* Dumping to disk...")
-							journalContent.dumpTo(new java.io.File("."))
-							println(" done.")
-						}
+
+						if (parseJournal)
+							return 0;
 					} else println("Journal not enabled in superblock.")
 				} else println("Skipping journal")
 

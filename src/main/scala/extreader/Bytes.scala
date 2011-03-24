@@ -1,6 +1,6 @@
 package extreader
 
-import java.io.{FileInputStream, File, OutputStream}
+import java.io.{FileInputStream, File, OutputStream, ByteArrayOutputStream}
 
 trait Bytes {
 	def get4(offset : Long ) : Long
@@ -26,6 +26,7 @@ trait Bytes {
 
 object Bytes {
 	def apply(data: Array[Char]) = new ByteArrayWrapper(data)
+//  def apply(data: IndexedSeq[Bytes]) = new BytesSeqWrapper(data)
 
 	def fromFile(file : File) : Bytes = {
 		val in = new FileInputStream(file)
@@ -53,6 +54,39 @@ object Bytes {
     contents
 	}
 }
+
+/* class BytesSeqWrapper(seq: IndexedSeq[Bytes]) extends Bytes {
+  val offsets = {
+    var total = 0;
+    seq map { b => 
+      total += b.length 
+      total
+    }
+  }
+
+  def indexOf(offset: Long) = {
+    var index = 0
+    for (sofar <- offsets) {
+      if (sofar > offset)
+        return index
+      else
+        index += 1
+    }
+    return index
+  }
+
+  def get(offset: Long): Char = {
+    val index = indexOf(offset)
+
+    val skipped = if (index == 0) 0 else offsets(index-1)
+
+    seq(index).get1(offset - skipped)
+  }
+
+  lazy val length = sizes reduceRight { _ + _ }
+
+
+} */
 
 class ByteArrayWrapper( val data : Array[Char] ) extends Bytes {
 	def trueOffset = 0
