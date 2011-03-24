@@ -2,41 +2,42 @@ package extreader
 
 object DirectoryFinder {
 
-	def findRootdir(fs : FileSystem) : Option[Int] = {
+	def findRootdir(fs : FileSystem) : Option[Block] = {
 		val bytes = fs.bytes
-		find(fs, i => {
-			val d1 = new DirRec( bytes.getFrom( i ) )
-			val d2 = new DirRec( bytes.getFrom( i+d1.next ) )
+		find(fs, block => {
+			val d1 = new DirRec( block )
+			val d2 = new DirRec( block.getFrom( d1.next ) )
 
-			if( (d2.nameIsDotDot && d1.inodeNum == d2.inodeNum)) {
+			if( d1.inodeNum == d2.inodeNum ) {
 				debug("[DirF]\t"+d1 )
 				debug("[DirF]\t"+d2 )
-				debug("[DirF]\t1k Block: "+d1.bytes.trueOffset / 1024 + "; 2k block: " + d1.bytes.trueOffset / 2048 )
-				debug("")
-
-			}
-
-			false
+				true
+			} else
+				false
 		})
 	}
-  
 
-  /**
+	/**
   	Will invoke fn on each 
   */
-	def find(fs: FileSystem, fn : Int => Boolean) : Option[Int] = {
+	def find(fs: FileSystem, fn : Block => Boolean) : Option[Block] = {
+		find(fs, (block, self, parent) => fn(block))
+	}
+
+	def find(fs: FileSystem, fn : (Block, DirRec, DirRec) => Boolean) : Option[Block] = {
 		var i = 0
-		while(i < fs.bytes.length - DirRec.minLength) {
+		for(i <- fs.blocks) {
 
-			val dir = new DirRec( fs.bytes.getFrom( i ) )
+			val self = new DirRec( i )
 
-			if(dir.next <= DirRec.maxLength && dir.nameIsDot ) {
+			if(self.next <= DirRec.maxLength && self.nameIsDot ) {
+				val parent = new DirRec( i getFrom self.next )
+				if(parent.next <= fs.blockSize && parent.nameIsDotDot )
 				
-				if( fn(i) )
+				if( fn(i,self,parent) )
 					return Some(i)
 				
-			} 
-			i += 1
+			}
 		}
 		None
 	}
@@ -45,9 +46,9 @@ object DirectoryFinder {
 object Directory {
 	def apply(inode: Inode, name: String ) : Directory = {
 		val fs = inode.fs
-		debug("[dir]\tLoading directory: "+name)
+		debug("[dir "+name+"]\tLoading directory: "+name)
 		val dir = new Directory(inode, name)
-		debug("[dir]\t"+inode)
+		debug("[dir "+name+"]\tStarting at inode: "+inode)
 		var valid = true
 
 		for( block <- inode.blocks ) {
@@ -56,19 +57,19 @@ object Directory {
 				while(valid && i < block.length - DirRec.minLength) {
 					val rec = new DirRec( block.getFrom(i) )
 					
-					debug("[dir]\tProcessing: "+rec)
+					debug("[dir "+name+"]\tProcessing: "+rec)
 
 					if(rec.inodeNum != inode.num && rec.inodeNum > 0 && !rec.nameIsDot && !rec.nameIsDotDot) {
 						val child = inode.fs.inode(rec.inodeNum)
-						println("[dir]\t"+child)
+						println("[dir "+name+"]\t child inode:"+child)
 
-						if(child.isDir) {
-							debug("[dir]\trecursing into child dir "+rec.name)
+						if(child.isDir && child.blockCount < 10) {
+							debug("[dir "+name+"]\trecursing into child dir "+rec.name)
 							dir.subdirs = Directory(child, rec.name) :: dir.subdirs
 						}
 
 						if(child.isFile) {
-							debug("[dir]\tAdding file "+rec.name)
+							debug("[dir "+name+"]\tAdding file "+rec.name)
 							dir.files = new FsFile(child, rec.name) :: dir.files
 						}
 
@@ -77,7 +78,7 @@ object Directory {
 
 					if(rec.next == 0) {
 						valid = false
-						debug("[dir]\tlast record")
+						debug("[dir "+name+"]\tlast record")
 					} else
 						i = i + rec.next
 					
