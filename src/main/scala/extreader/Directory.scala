@@ -66,6 +66,7 @@ object Directory {
 		val dir = new Directory(inode, name)
 		debug("[dir "+name+"]\tStarting at inode: "+inode)
 		var valid = true
+		var next = List[ () => Unit]()
 
 		for( block <- inode.blocks ) {
 			if(valid) {
@@ -79,14 +80,18 @@ object Directory {
 						val child = inode.fs.inode(rec.inodeNum)
 						debug("[dir "+name+"]\t child inode:"+child)
 
-						if(child.isDir && child.blockCount < 10) {
-							debug("[dir "+name+"]\trecursing into child dir "+rec.name)
-							dir.subdirs = Directory(child, rec.name) :: dir.subdirs
-						}
-
 						if(child.isFile) {
 							debug("[dir "+name+"]\tAdding file "+rec.name)
 							dir.files = new FsFile(child, rec.name) :: dir.files
+						}
+
+
+						if(child.isDir && child.blockCount < 100) {
+							debug("[dir "+name+"]\t defering recurse into "+rec.name)
+							next = ( () => {
+								debug("[dir "+name+"]\trecursing into child dir "+rec.name)
+								dir.subdirs = Directory(child, rec.name) :: dir.subdirs
+							} ) :: next							
 						}
 
 
@@ -99,6 +104,7 @@ object Directory {
 						i = i + rec.next
 					
 				}
+				for(down <- next) { down() }
 			}
 		}
 		dir 
