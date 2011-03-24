@@ -26,6 +26,8 @@ object Reader {
 		var parseJournal = false
 		var findDeleted = false
 		var dumpFiles = false
+		var extractDirTree = false
+		var loadTree = true
 
 		for(i <- 1 until args.length) {
 			args(i) match {
@@ -47,6 +49,8 @@ object Reader {
 						case "parsejournal" => { parseJournal = v.toBoolean }
 						case "finddeleted" => { findDeleted = v.toBoolean }
 						case "dumpfiles" => { dumpFiles = v.toBoolean }
+						case "loadTree"	=> { loadTree = v.toBoolean }
+						case "extractdirtree" => { extractDirTree = v.toBoolean }
 
 						case _ => { println("Unknown option: '"+a+"'") }
 					}
@@ -152,48 +156,42 @@ object Reader {
 
 				//debug(rootPos)
 
-				val homeInode = 3841
-
-				debugOff {
-
-				DirectoryFinder find (fs , { 
-					i => {
-						val d1 = new DirRec( bytes.getFrom( i ) )
-						val d2 = new DirRec( bytes.getFrom( i+d1.next ) )
-
-						if( (d2.nameIsDotDot && d1.inodeNum == homeInode && d2.inodeNum == 2)) {
-							val block = i/fs.blockSize
-							if(journalFile.exists{ x => x.inode.blockNums.contains(block) })
-								println("Found contents in journal block: "+block )
-							else
-								println("Found contents in block: "+block )							
-						}
-						false
-				}})
-
-				val homeBlock = 22017
-
-				InodeFinder find (fs, {(pos, inode) => 
-					if(inode.blockNum(0) == homeBlock && inode.isDir) {
-						println("Found inode: "+inode)
-						println(" in block "+pos/fs.blockSize)
-					}
-					false
-				})
-					
-				}
-
+				println("loading root inode")	
 				val rootInode = fs.inode(2)
+				println(rootInode)
+				println(rootInode.blockNums)
 
-				val rootDir = Directory(rootInode, "/")
+				println("loading home inode")
+				val homeInode = fs.inode(3841)
+				println(homeInode)
+				println(homeInode.blockNums)
 
-				println("File system contents: ")
-				println("")
+				println("loading broken inode")
+				val badInode = fs.inode(3849)
+				println(badInode)
+				//println(badInode.blockNums)
 
-				printTree(rootDir, "")
 
-				if(dumpFiles) 
-					dumpTree(rootDir, new File("dump"))
+				if(extractDirTree) {
+					print("Looking through FS for dirs... ")
+					val inodeLinks = extractDirInodeTree(fs)
+					println(" done.")
+					printRawTree(2, "", inodeLinks)
+				}	
+
+				if(loadTree) {
+					print("Loading fs tree...")
+					val rootDir = Directory(rootInode, "/")
+					println(" done.")
+
+					println("File system contents: ")
+					println("")
+
+					printTree(rootDir, "")
+
+					if(dumpFiles) 
+						dumpTree(rootDir, new File("dump"))
+				}
 			}
 			case None => {
 				println()
@@ -211,6 +209,49 @@ object Reader {
 		}
 	}
 
+	def extractDirInodeTree(fs:FileSystem) = {
+		val dirs = collection.mutable.Map[Long, List[Long]]()
+
+		debugOff{ DirectoryFinder find(fs, (startBlock, self, parent) => {
+			if(self.inodeNum != 2) {
+				dirs.update(parent.inodeNum, 
+					self.inodeNum :: dirs.getOrElse(parent.inodeNum, List.empty[Long])) 
+			}
+
+			false
+		})}
+
+		dirs
+
+	}
+
+	def scanDirRecs(fs:FileSystem) = {
+
+		DirectoryFinder find(fs, (startBlock, self, parent) => {
+			var blockNum = startBlock num
+			var valid = true
+
+			while( valid ) {
+				val block = fs.block(blockNum)
+				var i = 0
+			
+				while( valid && i < block.length - DirRec.minLength ) {
+					val rec = new DirRec( block.getFrom(i) )
+
+					if(rec.next == 0) {
+						valid = false
+					} else
+						i = i + rec.next
+				}
+
+				blockNum += 1
+			}
+
+			false
+		})
+
+	}
+
 	def printTree(root: Directory, prefix: String) {
 		println(prefix+ "+ "+root.name)
 		for(dir <- root.subdirs) {
@@ -219,6 +260,13 @@ object Reader {
 
 		for(file <- root.files) {
 			println(prefix+" - "+file.name)
+		}
+	}
+
+	def printRawTree(idx:Long, prefix: String, inodes: collection.Map[Long, List[Long]]) {
+		println(prefix + idx)
+		for( child <- inodes.getOrElse(idx, List.empty[Long]).distinct.sorted ) {
+			printRawTree(child, prefix+"  ", inodes)
 		}
 	}
 

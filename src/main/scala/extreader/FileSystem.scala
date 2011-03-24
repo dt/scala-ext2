@@ -45,6 +45,11 @@ class FileSystem(val bytes: Bytes, sb: Superblock, val clean: Option[Bytes]) {
 			metaBlock(1)
 	}
 
+	def blocks = new IndexedSeq[Block] {
+		def length = blockCount.toInt
+		def apply(n: Int) = block(n)
+	}
+
 	val gdt = new GroupDescTable(groupDescBlock)
 
 	def block(num: Long): Block = { 

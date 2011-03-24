@@ -28,6 +28,15 @@ Option examples:
 * dumpfiles=<boolean> dump files to disk
 * finddeleted=<boolean> attempt to recovered deleted files
 
+# Other Tools
+Obviously, refer to documentation or man pages, but these could be helpful:
+
+Extract a block (say 522) to a file:
+	dd if=ext3fs.dd of=block.dd bs=1024 count=1 skip=501
+Replace a block at an offset (say 261):
+	dd if=block.dd of=clean oseek=261 bs=1024 count=1 conv=notrunc
+Overwrite a block from one image to another: 
+	dd if=ext3fs.dd of=clean iseek=522 oseek=261 bs=1024 count=1 conv=notrunc
 
 # Possible methods of figuring out a trashed FS image
 
