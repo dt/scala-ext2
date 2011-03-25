@@ -1,36 +1,190 @@
-Report:
 
-Ext 2 & 3
-	The code to read ext2 was developed in Scala, and is primarily housed on github:
-	https://github.com/tinystatemachine/ext2-Reader
+FAT16
 
-Before discussing how this portion of the lab was completed, the primary author of the basic ext2 code was David Taylor, with contributions from Daniel Freeman. Additions to undelete 
+   * How did we approach the problem?
+      * We have looked up the specification and documentation about FAT16
+         * http://home.teleport.com/~brainy/fat16.htm
+         * http://www.win.tue.nl/~aeb/linux/fs/fat/fat-1.html
+      * Once we fully understood how FAT16 structure should look like, we
+      * looked at the image in hexdump to first manually examine the image,
+      * following the spec.
+      * We found that the corruption was that the Root Directory entries were
+      * overwritten.
+      * Then, we started coding in C to parse boot sector information, parse
+      * FAT table, and finally grab the actual file contents.
+   * Who contributed and how?
+      * Since this was pretty simple task, most of us just started working on
+      * it individually.
+      * So, basically everyone contributed to recover the files from FAT16
+      * image.
+   * What surprised you?
+      * Nothing really surprised us. We knew where the problem was, and the
+      * rest of the structures were reserved and followed the spec.
+   * What percentage of the files do you believe you recovered?
+      * We think we have recovered all of the valid files in the image.
+      * We didn't recover the file names. However, conveniently, there was a
+      * text file that lists all of the file names.
+         * Thus, we could manually change the file names to have more complete
+         * list of recovered files.
+   * What do you most wish you knew in advance?
+      * Where the corruption is.
+         * But we quickly figured it out, so there was no much time wasted.
 
-Initially we implemented the basic structures used by ext2 based on documentation and other implementations such as the linux kernel source and the jNode project.
-
-Ext2:
-
-We attempted to read the image but were unable to find a valid superblock (by scanning first for a magic number and then for any 1024 byte block which when loaded as a superblock had sane values [i.e. blocksize * blockcount should = image size])
-
-Without metadata in the image, we attempted to generate alternate metadata:
-	mkfs.ext2, likely having been used to create the image initially, is likely to be a good source of default values which will match the actual image size
-	> cp ext2fs.dd ext2meta.dd
-	> mkfs.ext2 ext2meta.dd
-
-This process could be repeated passing different parameters to mkfs until a successful combination is reached, however the defaults appeared to be correct in this image.
-
-With the second image, containing valid metadata for an image but no data, we altered our tools to read metadata (superblock and GDTs) from the optional metaimage.
-
-At this point we could read the ext2 image's files via standard ext2 methods.
 
 
-Ext3:
+NTFS
 
-Using the same code as Ext2, attempted to load ext3fs.dd. Superblock appears valid, but inode 2 looks invalid (type, blocks, size, etc). Code for extracting and parsing the journal was added by Daniel Freeman.
+   * How did we approach the problem?
+      * Similar to other file systems, we started by looking up the specs and
+      * documentations on NTFS
+         * There were a lot of sources, but to name a few useful ones:
+            * http://stderr.org/doc/ntfsdoc/index.html
+            * http://www.alex-ionescu.com/NTFS.pdf
+            * www.cse.scu.edu/~tschwarz/coen152_05/PPtPre/NTFSFS.ppt
+            * http://technet.microsoft.com/en-us/library/cc781134(WS.10).aspx
+      * There was too much information to digest. So, we first tried to
+      * understand NTFS in a big picture, deciding what parts are critical for
+      * our task.
+      * After a careful inspection, we had a basic idea of where
+      * fields/information are stored, and how to interpret them.
+      * We decided to look up some libraries that handle NTFS to grasp an idea
+      * of how to start coding and what data structure would be convenient.
+         * The only thing (and probably the best) we came across was a library
+         * called 'libntfs'. This was originally developed for linux users to
+         * help them dealing with NTFS disk and files. Since some of the
+         * specification of NTFS are not public, it wasn't complete, yet it
+         * was quite capable of doing everyday use of the file system.
+         * However, it is a large project which means it has high modularity
+         * and it contains lots of stuff that we don't need for the lab.
+      * At first, we tried to grab some of the definitions and structs to make
+      * our lives easy, but there were too many dependencies to other code or
+      * structs that we don't particularly care about. After trying to
+      * incorporate some of the ntfslib code we realized that 95% of the
+      * code/headers were never used but were so deeply embedded in the code
+      * that we decided to scrap all of it and write it all ourselves.
+         * Before doing this, we manually went through hexdump and see how
+         * complicated it would be to parse tables and fields by ourselves. It
+         * turned out that it isn't really that bad, so we finally decided to
+         * implement the minimal (yet, general enough to a certain point)
+         * code.
+      * This was coded in C.
+   * Who contributed and how?
+      * Implementation (code): Brian Pak
+      * NTFS structure info gathering, parsing, organizing: Matt Dickoff,
+      * Teddy Martin
+      * Review, fixing minor problems in code: Matt Dickoff, Teddy Martin,
+      * Brian Pak
+   * What surprised you?
+      * In fact, there were a couple:
+         * Security Descriptor Attribute (0x50)
+            * It does not have the standard header like other attributes.
+            * So, it doesn't contain the length of the attribute and it
+            * shouldn't have either minimum or maximum length according to
+            * $AttrDef.
+            * However, we read somewhere that it has default length of 0x68
+            * bytes. We manually checked all of FILE records and confirmed
+            * that is the case for us.
+         * FIXUP
+            * Apparently, this is a mechanism for NTFS to detect errors in a
+            * cluster. This technique is used in FILE records (and some other
+            * metadata records).
+            * The way it works is that the header of each record contains a
+            * Update Sequence Number (USN) and a buffer, and for each sector,
+            * the last two bytes of it on the record is copied into the buffer
+            * and USN is written in their place. When the record is read, the
+            * USN is compared against the last two bytes of each sector in the
+            * record. If they match, then two bytes are copied from the buffer
+            * to recover the original data. There are some complicated rules
+            * about this that differ from reading and writing, but since we
+            * are only dealing with reading, we ignored the latter.
+         * Data Run
+            * There are few cases that data run can be understood.
+               * Normal, unfragmented file
+               * Normal, fragmented file
+               * Normal, scrambled file
+               * Sparse, unfragmented file
+               * Compressed, unfragmented file
+               * Compressed, sparse, fragmented file
+               * etc.
+            * It is highly unlikely to have the last couple files. (You'd have
+            * to try really hard to split and compress the file.)
+            * We only implemented 'Normal, unfragmented file'. It is a simple
+            * extension from 'Normal, unfragmented' to 'Normal fragmented' and
+            * 'Normal scrambled', since it's just the same, but have more than
+            * one data run, and in different order, respectively.
+            * The way to interpret the header of data run was also annoying.
+            * Since it can have variable lengths for LCN offset and data run
+            * length, we need to be careful when masking the next bytes.
+   * What percentage of the files do you believe you recovered?
+      * We are fairly certain that we have recovered the valid files that were
+      * in the system, including the data inside of alternate data stream
+      * (ADS).
+         * Actually, there was a program called 'ntfsundelete' that comes with
+         * ntfslib/ntfsprogs, which grabs recoverable files. We ran the image
+         * through this program, and compared the outputs to ones from our
+         * recovery program. We diff'd every file and confirmed that we have
+         * exactly same number of the files and contents.
+            * Of course, this doesn't mean we have successfully recovered ALL
+            * possible files in the system. But we think comparing output
+            * against the well-known recovery program gives us some
+            * confidence.
+      * Just like 'ntfsundelete', we did not recover the directories.
+         * We manually looked into hexdump and tried to follow the spec on
+         * directory names, but weren't sure if it is actually possible with
+         * the current image. It could be the case that we misunderstood the
+         * spec, but at current state, we couldn't find an attribute that
+         * points to actual directory names (i.e. we see an attribute ENDMARK
+         * before the directory names that are in FILE record).
+      * We recovered file names whenever we could, meaning that we actually
+      * have the valid attribute for the file name.
+         * Out of the files that we have recovered, there was only one
+         * incident of the valid file name has been recovered. (file name for
+         * alternate data stream file for file072.jpg)
+   * What do you most wish you knew in advance?
+      * ntfslib is so large and extensive that it's almost useless for this
+      * lab.
+      * FIXUP
+         * We first didn't think this concept was important. So, when we
+         * recovered files without thinking of FIXUP, we had these some bytes
+         * that were wrong, and we didn't understand why.
+         * Luckily, we found about that soon after and implemented to get the
+         * correct output.
 
 
-Working backwards, we search the image for what looks like a root directory entry ( "." inode = 2 and ".." inode = 2), ignoring those which appear to be in the journal and find it at block 501. Following this, we find serch the filesystem for something that looks like an inode (i.e type = directory, first block = 501) and find inode 2 as the second inode in block 522 (instead of 261)
+Ext2/3
 
-Moving block 522 to 261 (via dd if=ext3fs.dd of=copy.dd count=1 bs=1024 iseek=522 oseek=261 conv=notrunc) allowed the root inode to be read, but subsequent inodes also appears to be invalid (odd types, sizes, etc)
+	* The code to read ext2 was developed in Scala, and is primarily housed on github:
+	  https://github.com/tinystatemachine/ext2-Reader
 
-By scanning for directory content blocks ("." and ".." at the beginning of a block) we obtain a mapping of directory contents and blocks, as well as a inode parent to inode child relationships
+  * Before discussing how this portion of the lab was completed, the primary author of the basic ext2 code was David Taylor, with contributions from Daniel Freeman.
+
+  * Initially we implemented the basic structures used by ext2 based on documentation and other implementations such as the linux kernel source and the jNode project.
+
+Ext2
+
+  * We attempted to read the image but were unable to find a valid superblock (by scanning first for a magic number and then for any 1024 byte block which when loaded as a superblock had sane values [i.e. blocksize * blockcount should = image size])
+
+  * Without metadata in the image, we attempted to generate alternate metadata:
+	  * mkfs.ext2, likely having been used to create the image initially, is likely to be a good source of default values which will match the actual image size
+	  * > cp ext2fs.dd ext2meta.dd
+	  * > mkfs.ext2 ext2meta.dd
+
+  * This process could be repeated passing different parameters to mkfs until a successful combination is reached, however the defaults appeared to be correct in this image.
+
+  * With the second image, containing valid metadata for an image but no data, we altered our tools to read metadata (superblock and GDTs) from the optional metaimage.
+
+  * At this point we could read the ext2 image's files via standard ext2 methods.
+
+
+Ext3
+
+  * Using the same code as Ext2, attempted to load ext3fs.dd. 
+    * Superblock appears valid, but inode 2 looks invalid (type, blocks, size, etc). 
+    * Code for extracting and parsing the journal was added by Daniel Freeman.
+
+
+  * Working backwards, we search the image for what looks like a root directory entry ( "." inode = 2 and ".." inode = 2), ignoring those which appear to be in the journal and find it at block 501. Following this, we find serch the filesystem for something that looks like an inode (i.e type = directory, first block = 501) and find inode 2 as the second inode in block 522 (instead of 261)
+
+  * Moving block 522 to 261 (via dd if=ext3fs.dd of=copy.dd count=1 bs=1024 iseek=522 oseek=261 conv=notrunc) allowed the root inode to be read, but subsequent inodes also appears to be invalid (odd types, sizes, etc)
+
+  * By scanning for directory content blocks ("." and ".." at the beginning of a block) we obtain a mapping of directory contents and blocks, as well as a inode parent to inode child relationships
