@@ -1,3 +1,18 @@
+// This file is part of ScalaFSR.  ScalaFSR is free software: you can
+// redistribute it and/or modify it under the terms of the GNU General Public
+// License as published by the Free Software Foundation, version 2.
+//
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+// FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+// details.
+//
+// You should have received a copy of the GNU General Public License along with
+// this program; if not, write to the Free Software Foundation, Inc., 51
+// Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+//
+// (c) David Taylor and Daniel Freeman
+
 package extreader
 
 object FileSystem {
@@ -65,7 +80,7 @@ class FileSystem(val bytes: Bytes, sb: Superblock, val clean: Option[Bytes]) {
 		}
 		debug("[fs]\tinode "+num+" is the "+inodeIndexInBlock(num)+"th inode in group "+groupNumOfInode(num))
 
-		val inodeBytes = group(groupNumOfInode(num)).inodeBytes(inodeIndexInBlock(num))
+		val inodeBytes = group(groupNumOfInode(num)).inodeBytes(inodeIndexInGroup(num))
 
 		new Inode(this, num, inodeBytes)
 	}
@@ -75,13 +90,18 @@ class FileSystem(val bytes: Bytes, sb: Superblock, val clean: Option[Bytes]) {
 		groupCache.getOrElseUpdate(num, new Group(this, num, gdt(num) ))
 	}
 
-	def groupNumOfBlock(blockNum: Long) = (( blockNum - firstDataBlock ) / blocksPerGroup)
+	def groupNumOfBlock(blockNum: Long) = {
+		(( blockNum - firstDataBlock ) / blocksPerGroup)}
 	def groupNumOfInode(inodeNum: Long) = (( inodeNum - 1) / inodesPerGroup)
-	def inodeIndexInBlock(inodeNum: Long) = ( (inodeNum - 1) % inodesPerGroup )
+	def blockNumOfInode(inodeNum : Long) = {
+		group(groupNumOfInode(inodeNum)).blockOf(inodeIndexInBlock(inodeNum))}
+
+	def inodeIndexInGroup(inodeNum: Long) = ( (inodeNum - 1) % inodesPerGroup )
+	def inodeIndexInBlock(inodeNum: Long) = ( (inodeNum - 1) % inodesPerBlock )
 		
 	def blockAt(num: Long, at: Long) = {
 		debug("[fs]\tblock "+num+" at "+at)
-		new Block(num, bytes.getRange(at, blockSize) )
+		new Block(this,num, bytes.getRange(at, blockSize) )
 	}
 
 	def metaBlock(num: Long): Block = {
@@ -89,7 +109,7 @@ class FileSystem(val bytes: Bytes, sb: Superblock, val clean: Option[Bytes]) {
 	}
 
 	def metaBlockAt(num: Long, at: Long) = {
-		new Block(num, clean.getOrElse(bytes).getRange(at, blockSize))
+		new Block(this,num, clean.getOrElse(bytes).getRange(at, blockSize))
 	}
 
 	def fakeInodeAt(at: Long) = new Inode( this, -1, bytes.getRange(at, inodeSize))
