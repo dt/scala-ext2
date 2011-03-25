@@ -184,9 +184,30 @@ object Reader {
 			println(" done.")
 			printRawTree(2, "", inodeLinks)
 
-			println("search for inodes which point to blocks...")
+			println("Searching for inodes which point to blocks...")
 
-			InodeFinder find (fs, (x, y) => false)
+	//		val inodeNum = 2
+	//		var dirBlock = fs.block(501)
+			for( (inodeNum, dirBlock) <- inode2block ) {
+
+				val idxInBlock = fs.inodeIndexInBlock(inodeNum)
+
+				val expectedBlock = fs.blockNumOfInode(inodeNum)
+
+				println("\t inode "+inodeNum+"["+expectedBlock+"/"+idxInBlock+"]: block 0: "+dirBlock.num+"... ")
+
+				for ( block <- fs.blocks if !journalFile.exists(_.inode.blockNums.contains(block.num))) {
+					val inode = block.fakeInode(idxInBlock)
+					try {
+					if(inode.isDir && inode.blockNum(0) == dirBlock.num)			
+						println(Console.GREEN + "\tFound: "+block.num+Console.WHITE)
+					} 
+				}
+				println(Console.WHITE)
+
+			}
+
+			println()
 		}	
 
 		if(loadTree) {
