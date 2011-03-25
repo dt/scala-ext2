@@ -4,6 +4,7 @@ Ext 2 & 3
 	The code to read ext2 was developed in Scala, and is primarily housed on github:
 	https://github.com/tinystatemachine/ext2-Reader
 
+Before discussing how this portion of the lab was completed, the primary author of the basic ext2 code was David Taylor, with contributions from Daniel Freeman. Additions to undelete 
 
 Initially we implemented the basic structures used by ext2 based on documentation and other implementations such as the linux kernel source and the jNode project.
 
@@ -25,8 +26,11 @@ At this point we could read the ext2 image's files via standard ext2 methods.
 
 Ext3:
 
-Using the same code as Ext2, attempted to load ext3fs.dd. Superblock appears valid, but inode 2 looks invalid (type, blocks, size, etc).
+Using the same code as Ext2, attempted to load ext3fs.dd. Superblock appears valid, but inode 2 looks invalid (type, blocks, size, etc). Code for extracting and parsing the journal was added by Daniel Freeman.
+
 
 Working backwards, we search the image for what looks like a root directory entry ( "." inode = 2 and ".." inode = 2), ignoring those which appear to be in the journal and find it at block 501. Following this, we find serch the filesystem for something that looks like an inode (i.e type = directory, first block = 501) and find inode 2 as the second inode in block 522 (instead of 261)
 
 Moving block 522 to 261 (via dd if=ext3fs.dd of=copy.dd count=1 bs=1024 iseek=522 oseek=261 conv=notrunc) allowed the root inode to be read, but subsequent inodes also appears to be invalid (odd types, sizes, etc)
+
+By scanning for directory content blocks ("." and ".." at the beginning of a block) we obtain a mapping of directory contents and blocks, as well as a inode parent to inode child relationships
