@@ -45,6 +45,8 @@ Overwrite a block from one image to another:
 
 # Possible methods of figuring out a trashed FS image
 
+See "report.txt" for more information -- it and the following cover similar material
+
 1) Trial-and-error with reasonable guesses
 	1.1) Using a freshly created image as a source of guesses
 	1.2) Generate lots of values, test and score
