@@ -157,10 +157,13 @@ object Reader {
 		debug("\tInodes per group: "+fs.inodesPerGroup)
 		debug("\tBlocks per group: "+fs.blocksPerGroup)
 
+		var journalFile = Option.empty[FsFile]
+
 		if ( !skipJournal ) {
 			if( sb.journalEnabled) {
 				println("Reading journal...")
 				val journalContent = new FsFile(fs.inode(sb.journalInode), "journal")
+				journalFile = Some(journalContent)
 				val dumpFile = new File("journal")
 
 				if (dumpJournal || (parseJournal && !dumpFile.exists)) {
