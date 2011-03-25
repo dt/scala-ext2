@@ -1,9 +1,26 @@
+// This file is part of ScalaFSR.  ScalaFSR is free software: you can
+// redistribute it and/or modify it under the terms of the GNU General Public
+// License as published by the Free Software Foundation, version 2.
+//
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+// FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+// details.
+//
+// You should have received a copy of the GNU General Public License along with
+// this program; if not, write to the Free Software Foundation, Inc., 51
+// Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+//
+// (c) David Taylor and Daniel Freeman
+
 package extreader
 
+/**
+*	Utility class for finding the directory contents in some bytes
+*/
 object DirectoryFinder {
-
 	/**
-		Similar to findRootdir, but does not use blocks	
+	*	Similar to findRootdir, but does not use blocks	
 	*/ 
 	def rawFindRootdir(bytes: Bytes) : Option[Long] = {
 		var i = 0L
@@ -20,6 +37,9 @@ object DirectoryFinder {
 		None
 	}
 
+	/**
+	*	seaches a filesystem block-by-block, checking for "." and ".." pointing to 2
+	*/
 	def findRootdir(fs: FileSystem) : Option[Block] = {
 		val bytes = fs.bytes
 		find(fs, (block, self, parent) => {
@@ -34,12 +54,9 @@ object DirectoryFinder {
 	}
 
 	/**
-  	Will invoke fn on each 
-  */
-	def find(fs: FileSystem, fn : Block => Boolean) : Option[Block] = {
-		find(fs, (block, self, parent) => fn(block))
-	}
-
+	*	searches a filesystem block-by-block invoking fn on blocks which
+	* start with "." and ".." records, passing the block and the records
+	*/
 	def find(fs: FileSystem, fn : (Block, DirRec, DirRec) => Boolean) : Option[Block] = {
 		var i = 0
 		for(i <- fs.blocks) {
@@ -57,8 +74,18 @@ object DirectoryFinder {
 		}
 		None
 	}
+
+	/**
+	*	similar to find, but does not pass self and parent to fn
+	*/
+	def find(fs: FileSystem, fn : Block => Boolean) : Option[Block] = {
+		find(fs, (block, self, parent) => fn(block))
+	}
 }
 
+/**
+*	Utility object for methods which handle loading directories from records
+*/
 object Directory {
 	def apply(inode: Inode, name: String ) : Directory = {
 		val fs = inode.fs
@@ -111,11 +138,15 @@ object Directory {
 	}
 }
 
+
 class Directory(val inode: Inode, val name: String) {
 	var subdirs = List[Directory]()
 	var files = List[FsFile]()
 }
 
+/**
+*	class for directory records
+*/
 object DirRec {
 	val structLength = 4 + 2 + 1 + 1
 	val maxLength = structLength + 0xFF // 8+ max(nameLength) 

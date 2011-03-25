@@ -1,8 +1,27 @@
+// This file is part of ScalaFSR.  ScalaFSR is free software: you can
+// redistribute it and/or modify it under the terms of the GNU General Public
+// License as published by the Free Software Foundation, version 2.
+//
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+// FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+// details.
+//
+// You should have received a copy of the GNU General Public License along with
+// this program; if not, write to the Free Software Foundation, Inc., 51
+// Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+//
+// (c) David Taylor and Daniel Freeman
+
 package extreader
 
-
+/**
+*	Utility object for methods which search for inodes conforming to a predicate
+*/ 
 object InodeFinder {
-		def find ( fs: FileSystem, test: (Long, Inode) => Boolean): Option[Inode]= {
+	// finds things in a filesystem which look like inodes according to test
+	// 	test is given the offset and a fake inode at that offset
+	def find ( fs: FileSystem, test: (Long, Inode) => Boolean): Option[Inode]= {
 		var i = 0
 		
 		while(i < fs.bytes.length - 127) {
@@ -17,6 +36,12 @@ object InodeFinder {
 			i += 1
 		}
 		None
+	}
+}
+
+object Inode {
+	def indexInBlock(fs: FileSystem, index: Long) = {
+		index % fs.inodesPerBlock
 	}
 }
 
@@ -63,7 +88,8 @@ class Inode(val fs : FileSystem, val num: Long, val bytes: Bytes) {
 	val doubleIndirectsPerBlock = indirectsPerBlock * indirectsPerBlock
 	val tripleIndirectsPerBlock = indirectsPerBlock * indirectsPerBlock * indirectsPerBlock
 
-
+	// get the absolute block number of the i'th block of this inode
+	// 	follows indirect blocks as needed to resolve these block numbers
 	def blockNum(localBlockIndex: Int): BlockNum = {
 		
 		if( localBlockIndex < 12) { // blocks 0 - 11
@@ -96,7 +122,7 @@ class Inode(val fs : FileSystem, val num: Long, val bytes: Bytes) {
 		}
 	}
 
-
+	// recursively resolves block number for levels of indirection > 0
 	def resolveIndirect(pointersBlock: Long, index: Long, level: Int): BlockNum = {
 		if(pointersBlock == 0)
 			0
@@ -113,6 +139,7 @@ class Inode(val fs : FileSystem, val num: Long, val bytes: Bytes) {
 		}
 	}
 
+	// the list of block numbers pointed to be this inode
 	lazy val blockNums = {
 
 		debug("[inode]\tReading block numbers...")
@@ -136,6 +163,7 @@ class Inode(val fs : FileSystem, val num: Long, val bytes: Bytes) {
 		
 	}
 
+	// convert the block numbers to blocks
 	def blocks = { blockNums map {x => fs.block(x) } }
 
 
@@ -211,6 +239,7 @@ class Inode(val fs : FileSystem, val num: Long, val bytes: Bytes) {
 	 
 	def readableType = if(isFile) "file" else if(isDir) "directory" else "other"
 	
+	// best guess if this inode is valid
 	def looksValid = (format == Constants.EXT2_S_IFLNK || format == Constants.EXT2_S_IFREG || format == Constants.EXT2_S_IFBLK || format == Constants.EXT2_S_IFIFO || format == Constants.EXT2_S_IFDIR || format == Constants.EXT2_S_IFCHR)
 
 	def looksLikeDir = format==Constants.EXT2_S_IFDIR

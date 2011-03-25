@@ -1,12 +1,41 @@
+// This file is part of ScalaFSR.  ScalaFSR is free software: you can
+// redistribute it and/or modify it under the terms of the GNU General Public
+// License as published by the Free Software Foundation, version 2.
+//
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+// FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+// details.
+//
+// You should have received a copy of the GNU General Public License along with
+// this program; if not, write to the Free Software Foundation, Inc., 51
+// Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+//
+// (c) David Taylor and Daniel Freeman
+
 package extreader
 
-class Block(val num: Long, var bytes : Bytes ) extends BytesWrapper(bytes) {
+/**
+* Wraps raw bytes which make up a block, keeping track of the block number too
+*/
+class Block(fs: FileSystem, val num: Long, var bytes : Bytes ) 
+	extends BytesWrapper(bytes) {
 	override def toString = "block at "+hex(bytes.trueOffset)
+
+	// get a inode which would be the i'th inode in this block
+	def fakeInode(index: Long) = {
+		 new Inode( fs, -1, getRange( index*fs.inodeSize, fs.inodeSize))
+	}
 }
 
+/**
+*	Utility object for methods used to guess the block size in use in some bytes
+*/
 object BlockSizeGuesser {
 	case class Score(size: Int, hits: Int, misses: Int)
 
+	// looks through bytes for what look like "." and ".." directory records
+	// for each size, check if the beginning of the "." record is block aligned
 	def checkDirs(bytes:Bytes, sizes: List[Int]) = {
 		var i = 0L
 		var scores = collection.mutable.Map[Int, Score]()
@@ -32,6 +61,7 @@ object BlockSizeGuesser {
 		scores.values.toList.sortBy(x => x.hits - x.misses)
 	}
 
+	// searches some bytes for likely block sizes reporting which look likely
 	def search(bytes: Bytes) {
 		println("Scanning for directory contents blocks...")
 		val scores = checkDirs(bytes, List(1024, 2048, 4096, 8192))

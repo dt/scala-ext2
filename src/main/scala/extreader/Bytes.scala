@@ -1,7 +1,32 @@
+// This file is part of ScalaFSR.  ScalaFSR is free software: you can
+// redistribute it and/or modify it under the terms of the GNU General Public
+// License as published by the Free Software Foundation, version 2.
+//
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+// FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+// details.
+//
+// You should have received a copy of the GNU General Public License along with
+// this program; if not, write to the Free Software Foundation, Inc., 51
+// Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+//
+// (c) David Taylor and Daniel Freeman
+
 package extreader
 
 import java.io.{FileInputStream, File, OutputStream, ByteArrayOutputStream}
 
+/**
+*   low level class for accessing some bytes with helpers to get values like:
+*     4 byte int (as a long because java doesn't have unsigned)
+*     2 byte short (as an int, see above)
+*     1 byte char 
+*   as well as sub-ranges of a given length at a position
+*
+*   An implementation which actually wraps bytes, as well implementations which
+*   represent subranges by calling the underlying Bytes after applying an offset
+*/
 trait Bytes {
 	def get4(offset : Long ) : Long
   def get4BE(offset : Long ) : Long
@@ -88,6 +113,7 @@ object Bytes {
 
 } */
 
+// directly wraps an array of bytes (Char's due to Java's lack of unsigned)
 class ByteArrayWrapper( val data : Array[Char] ) extends Bytes {
 	def trueOffset = 0
 
@@ -140,6 +166,7 @@ class ByteArrayWrapper( val data : Array[Char] ) extends Bytes {
   	((b1 << 24) | (b2 << 16) | (b3 << 8) | b4) & 0xFFFFFFFFL
 }
 
+// anything which sits on top of bytes can extend this to be a Bytes itself
 class BytesWrapper(val data: Bytes) extends Bytes {
   def length = data.length
 
@@ -169,6 +196,7 @@ class BytesWrapper(val data: Bytes) extends Bytes {
 
 }
 
+// offsets accesses to data by a base offset
 class BytesWithOffet( val data: Bytes, base : Long) extends Bytes {
 
 	def length = data.length - base
@@ -197,9 +225,9 @@ class BytesWithOffet( val data: Bytes, base : Long) extends Bytes {
     data.writeWithOffsetAndLengthTo(os, writeOffset + base, writeLength )
   }
 
-
 }
 
+// offsets accesses to data by a base offset and enforces length of the subrange
 class ByteRange (val data : Bytes, base : Long, count : Long ) extends Bytes {
  	def length = count
 

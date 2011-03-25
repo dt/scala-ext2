@@ -1,5 +1,8 @@
 package extreader
-
+/**
+* Wraps bytes which represent a group descriptor table and provides a method
+* to obtain the descriptor for a given group number
+*/
 class GroupDescTable(val bytes : Bytes) {
 	def apply(groupNum: Long) = {
 		val offset = (groupNum * GroupDesc.size)
@@ -9,22 +12,23 @@ class GroupDescTable(val bytes : Bytes) {
 	
 }
 
-/*
-Table 3-12. Block Group Descriptor Structure
-Offset (bytes)	Size (bytes)	Description
-	0		4		bg_block_bitmap
-	4		4		bg_inode_bitmap
-	8		4		bg_inode_table
-	12	2		bg_free_blocks_count
-	14	2		bg_free_inodes_count
-	16	2		bg_used_dirs_count
-	18	2		bg_pad
-	20	12	bg_reserved
+/** 
+* GroupDesc interprets bytes as a group descriptor
+* 	The following is copied from http://www.nongnu.org/ext2-doc/ext2.html
+* 
+*		Table 3-12. Block Group Descriptor Structure
+*			Offset	Size 	Description
+*			0				4			bg_block_bitmap
+*			4				4			bg_inode_bitmap
+*			8				4			bg_inode_table
+*			12			2			bg_free_blocks_count
+*			14			2			bg_free_inodes_count
+*			16			2			bg_used_dirs_count
+*			18			2			bg_pad
+*			20			12		bg_reserved
 */
-
 object GroupDesc {
 	val size = 4 + 4 + 4 + 2 + 2 + 2 + 2 + 12
-	assert(size == 32)
 }
 
 class GroupDesc(val bytes: Bytes) {
@@ -43,25 +47,38 @@ class GroupDesc(val bytes: Bytes) {
 
 }
 
+/**
+*	Represents a group, with methods using a group descriptor to find items
+*/
 class Group(fs: FileSystem, val num: Long, desc: GroupDesc) {
-	val pad = { if(num < fs.padGroupBelow) fs.groupDescPad else 0 }
-	def blockBitmapBlock = desc.blockBitmapBlock + pad
-	def inodeBitmapBlock = desc.inodeBitmapBlock + pad
-	def inodeTableFirstBlock = desc.inodeTableFirstBlock + pad
+	def blockBitmapBlock = desc.blockBitmapBlock
+	def inodeBitmapBlock = desc.inodeBitmapBlock
+	def inodeTableFirstBlock = desc.inodeTableFirstBlock
 	def freeBlocks = desc.freeBlocks 
 	def freeInodes = desc.freeInodes 
 
+	// get the absolute block number of the i'th block of this group
+	def blockOf(inodeIndex: Long): BlockNum = {
+		val blockOffset = inodeIndex / fs.inodesPerBlock
+		val blockNum = 	inodeTableFirstBlock + blockOffset
+
+		debug("[Group]\t\tIn the "+blockOffset+
+			"th block of inodes in group (block "+blockNum+")...")
+
+		blockNum
+	}
+
+	// get the bytes representing the i'th inode in this group
 	def inodeBytes(inodeIndexInGroup: Long): Bytes = {
 		debug("[Group]\tInode at offset "+inodeIndexInGroup+" in group "+num+"...")
-		val blockOffset = inodeIndexInGroup / fs.inodesPerBlock
-		val blockNum = inodeTableFirstBlock + blockOffset
+		val blockNum = blockOf(inodeIndexInGroup)
 
-		debug("[Group]\t\tIn the "+blockOffset+"th block of inodes in group (block "+blockNum+")...")
-
-		val inodeIndexInBlock = (inodeIndexInGroup % fs.inodesPerBlock)
+		val inodeIndexInBlock = Inode.indexInBlock(fs, inodeIndexInGroup )
 		debug("[Group]\t\tThe "+inodeIndexInBlock+" inode of block "+blockNum+"...")
 		val offsetInBlock = inodeIndexInBlock * fs.inodeSize 
-		debug("[Group]\t\tThus 0x"+hex(offsetInBlock)+" bytes into block "+blockNum+"...")
+
+		debug("[Group]\t\tThus 0x"+hex(offsetInBlock)+
+			" bytes into block "+blockNum+"...")
 
 		fs.block(blockNum).getRange(offsetInBlock, fs.inodeSize)
 	}
