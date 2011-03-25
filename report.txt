@@ -1,0 +1,32 @@
+Report:
+
+Ext 2 & 3
+	The code to read ext2 was developed in Scala, and is primarily housed on github:
+	https://github.com/tinystatemachine/ext2-Reader
+
+
+Initially we implemented the basic structures used by ext2 based on documentation and other implementations such as the linux kernel source and the jNode project.
+
+Ext2:
+
+We attempted to read the image but were unable to find a valid superblock (by scanning first for a magic number and then for any 1024 byte block which when loaded as a superblock had sane values [i.e. blocksize * blockcount should = image size])
+
+Without metadata in the image, we attempted to generate alternate metadata:
+	mkfs.ext2, likely having been used to create the image initially, is likely to be a good source of default values which will match the actual image size
+	> cp ext2fs.dd ext2meta.dd
+	> mkfs.ext2 ext2meta.dd
+
+This process could be repeated passing different parameters to mkfs until a successful combination is reached, however the defaults appeared to be correct in this image.
+
+With the second image, containing valid metadata for an image but no data, we altered our tools to read metadata (superblock and GDTs) from the optional metaimage.
+
+At this point we could read the ext2 image's files via standard ext2 methods.
+
+
+Ext3:
+
+Using the same code as Ext2, attempted to load ext3fs.dd. Superblock appears valid, but inode 2 looks invalid (type, blocks, size, etc).
+
+Working backwards, we search the image for what looks like a root directory entry ( "." inode = 2 and ".." inode = 2), ignoring those which appear to be in the journal and find it at block 501. Following this, we find serch the filesystem for something that looks like an inode (i.e type = directory, first block = 501) and find inode 2 as the second inode in block 522 (instead of 261)
+
+Moving block 522 to 261 (via dd if=ext3fs.dd of=copy.dd count=1 bs=1024 iseek=522 oseek=261 conv=notrunc) allowed the root inode to be read, but subsequent inodes also appears to be invalid (odd types, sizes, etc)

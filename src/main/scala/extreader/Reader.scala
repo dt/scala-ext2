@@ -1,12 +1,15 @@
 package extreader
 
 import java.io.File
+
 /*
 	Some inspiration taken from jNode's EXT2 implementation
 	http://gitorious.org/jnode/svn-mirror/trees/master/fs/src/fs/org/jnode/fs/ext2
 */
 
 object Reader { 
+	type InodeParents = collection.Map[Long, List[Long]]
+	
 	def main(args: Array[String]) { 
 		if(args.length < 1) {
 			println("image name must be first argument")
@@ -28,6 +31,7 @@ object Reader {
 		var dumpFiles = false
 		var extractDirTree = false
 		var loadTree = true
+		var guessBlockSize = false
 
 		for(i <- 1 until args.length) {
 			args(i) match {
@@ -49,8 +53,9 @@ object Reader {
 						case "parsejournal" => { parseJournal = v.toBoolean }
 						case "finddeleted" => { findDeleted = v.toBoolean }
 						case "dumpfiles" => { dumpFiles = v.toBoolean }
-						case "loadTree"	=> { loadTree = v.toBoolean }
+						case "loadtree"	=> { loadTree = v.toBoolean }
 						case "extractdirtree" => { extractDirTree = v.toBoolean }
+						case "guessblocksize" => { guessBlockSize = v.toBoolean }
 
 						case _ => { println("Unknown option: '"+a+"'") }
 					}
@@ -69,6 +74,14 @@ object Reader {
 			println("Loading alternate metadata image: "+cleanFile) 
 			Bytes fromFile (new File(cleanFile)) 
 		}}
+		println()
+
+
+		if(guessBlockSize) {
+			println("Attempting to guess block size...")
+			BlockSizeGuesser search bytes
+			return 0;
+		}
 
 		val superblock: Option[Superblock] = overrideSB match {
 			case Some(pos) => {
@@ -96,123 +109,108 @@ object Reader {
 			}
 		}
 
-		superblock match {
-			case Some(sb) => {
-				println("Loading filesystem...")
-				val fs = new FileSystem(bytes, sb, cleanBytes)
-				groupPad.map{ x => fs.groupDescPad = x }
-				forceBlocksize.map{ x => fs.blockSize = x }
+		println("")
 
-				debug("File system info:")
-				debug("\tblock size: "+fs.blockSize)
-				debug("\tinode size: "+fs.inodeSize)
-				debug("\tInodes per group: "+fs.inodesPerGroup)
-				debug("\tBlocks per group: "+fs.blocksPerGroup)
+		if(superblock.isEmpty) {
+			println()
+			println(Console.RED + "No superblock: " + Console.WHITE)
+			println()
 
-				var journalFile = Option.empty[FsFile]
-
-				if ( !skipJournal ) {
-					if( sb.journalEnabled) {
-						println("Reading journal...")
-						val journalContent = new FsFile(fs.inode(sb.journalInode), "journal")
-						val journalFile = new File("journal")
-
-						if (dumpJournal || (parseJournal && !journalFile.exists)) {
-							print("\t* Dumping to disk...")
-							debugOff { journalContent.dumpTo(new File(".")) }
-							println(" done.")
-						}
-						if (parseJournal) {
-							print("\t* Parsing...")
-
-							val journal = debugOff {
-								new Journal(Bytes.fromFile(new File("journal")))
-							}
-
-							println(" done.")
-							debug("Journal info:")
-							debug(String.format("\tsuperblock header signature: 0x%x", 
-								journal.sb.header.signature.asInstanceOf[AnyRef]))
-							debug("\tblock size: " + journal.blockSize)
-							debug("\tblock count: " + journal.blockCount)
-							debug("\tfirst journal block: " + journal.firstJournalBlock)
-							debug("\tfirst sequence number: " + journal.firstSeqNum)
-							debug("\tfirst transaction block: " + journal.firstTransBlock)
-
-							val block = new JournalDescriptor(journal.block(journal.firstJournalBlock))
-							debug("First block:")
-							debug("\ttype: " + block.header.blockType)
-
-							debug("\tfs block: " + block.fsBlock)
-							debug("\tflags: " + block.flags)
-						}
-
-						if (parseJournal)
-							return 0;
-					} else println("Journal not enabled in superblock.")
-				} else println("Skipping journal")
-
-				//val rootPos = DirectoryFinder findRootdir fs 
-
-				//debug(rootPos)
-
-				println("loading root inode")	
-				val rootInode = fs.inode(2)
-				println(rootInode)
-				println(rootInode.blockNums)
-
-				println("loading home inode")
-				val homeInode = fs.inode(3841)
-				println(homeInode)
-				println(homeInode.blockNums)
-
-				println("loading broken inode")
-				val badInode = fs.inode(3849)
-				println(badInode)
-				//println(badInode.blockNums)
-
-
-				if(extractDirTree) {
-					print("Looking through FS for dirs... ")
-					val inodeLinks = extractDirInodeTree(fs)
-					println(" done.")
-					printRawTree(2, "", inodeLinks)
-				}	
-
-				if(loadTree) {
-					print("Loading fs tree...")
-					val rootDir = Directory(rootInode, "/")
-					println(" done.")
-
-					println("File system contents: ")
-					println("")
-
-					printTree(rootDir, "")
-
-					if(dumpFiles) 
-						dumpTree(rootDir, new File("dump"))
-				}
+			println("\t* Provide a alternate location in image: overrideSB=<pos>")
+			println("\t* Provide a alternate image for metadata: metaimage=<metaimg>")
+			println()
+			println("Would you like to search for possible superblocks? (y/n)")
+			if( Console readBoolean ) {
+				SuperblockFinder search bytes 
 			}
-			case None => {
-				println()
-				println(Console.RED + "No superblock: " + Console.WHITE)
-				println()
+			return 0;
+		}
 
-				println("\t* Provide a alternate location in image: overrideSB=<pos>")
-				println("\t* Provide a alternate image for metadata: metaimage=<metaimg>")
-				println()
-				println("Would you like to search for possible superblocks? (y/n)")
-				if( Console readBoolean ) {
-					SuperblockFinder search bytes 
+		val sb = superblock.get
+		println("Loading filesystem...")
+		val fs = new FileSystem(bytes, sb, cleanBytes)
+		groupPad.map{ x => fs.groupDescPad = x }
+		forceBlocksize.map{ x => fs.blockSize = x }
+
+		debug("File system info:")
+		debug("\tblock size: "+fs.blockSize)
+		debug("\tinode size: "+fs.inodeSize)
+		debug("\tInodes per group: "+fs.inodesPerGroup)
+		debug("\tBlocks per group: "+fs.blocksPerGroup)
+
+		if ( !skipJournal ) {
+			if( sb.journalEnabled) {
+				println("Reading journal...")
+				val journalContent = new FsFile(fs.inode(sb.journalInode), "journal")
+				if (dumpJournal || parseJournal) {
+					print("\t* Dumping to disk...")
+					debugOff { journalContent.dumpTo(new File(".")) }
+					println(" done.")
 				}
-			}
+				if (parseJournal) {
+					print("\t* Parsing...")
+
+					val journal = debugOff {
+						new Journal(Bytes.fromFile(new File("journal")))
+					}
+
+					println(" done.")
+					debug("Journal info:")
+					debug(String.format("\tsuperblock header signature: 0x%x", 
+						journal.sb.header.signature.asInstanceOf[AnyRef]))
+					debug("\tblock size: " + journal.blockSize)
+					debug("\tblock count: " + journal.blockCount)
+
+				}
+
+				if (parseJournal)
+					return 0;
+			} else println("Journal not enabled in superblock.")
+		} else println("Skipping journal")
+
+		//val rootPos = DirectoryFinder findRootdir fs 
+
+		//debug(rootPos)
+
+		var rawDirTree = Option.empty[InodeParents]
+
+		if(extractDirTree) {
+			print("Looking through FS for dirs... ")
+			val (inode2block, block2inode, inodeLinks) = extractDirInodeTree(fs)
+			rawDirTree = Some(inodeLinks)
+			println(" done.")
+			printRawTree(2, "", inodeLinks)
+
+			println("search for inodes which point to blocks...")
+
+			InodeFinder find (fs, (x, y) => false)
+		}	
+
+		if(loadTree) {
+			print("Loading fs tree...")
+			val rootDir = Directory(fs.inode(2), "/")
+			println(" done.")
+
+			println("File system contents: ")
+			println("")
+
+			printTree(rootDir, "")
+
+			if(dumpFiles) 
+				dumpTree(rootDir, new File("dump"))
 		}
 	}
+	
 
 	def extractDirInodeTree(fs:FileSystem) = {
 		val dirs = collection.mutable.Map[Long, List[Long]]()
+		val inode2block = collection.mutable.Map[Long, Block]()
+		val block2inode = collection.mutable.Map[Block, Long]()
 
 		debugOff{ DirectoryFinder find(fs, (startBlock, self, parent) => {
+			inode2block += ((self.inodeNum, startBlock))
+			block2inode += ((startBlock, self.inodeNum))
+
 			if(self.inodeNum != 2) {
 				dirs.update(parent.inodeNum, 
 					self.inodeNum :: dirs.getOrElse(parent.inodeNum, List.empty[Long])) 
@@ -221,7 +219,7 @@ object Reader {
 			false
 		})}
 
-		dirs
+		( inode2block, block2inode, dirs)
 
 	}
 
@@ -263,7 +261,7 @@ object Reader {
 		}
 	}
 
-	def printRawTree(idx:Long, prefix: String, inodes: collection.Map[Long, List[Long]]) {
+	def printRawTree(idx:Long, prefix: String, inodes: InodeParents) {
 		println(prefix + idx)
 		for( child <- inodes.getOrElse(idx, List.empty[Long]).distinct.sorted ) {
 			printRawTree(child, prefix+"  ", inodes)

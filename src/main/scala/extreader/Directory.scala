@@ -2,15 +2,31 @@ package extreader
 
 object DirectoryFinder {
 
-	def findRootdir(fs : FileSystem) : Option[Block] = {
-		val bytes = fs.bytes
-		find(fs, block => {
-			val d1 = new DirRec( block )
-			val d2 = new DirRec( block.getFrom( d1.next ) )
+	/**
+		Similar to findRootdir, but does not use blocks	
+	*/ 
+	def rawFindRootdir(bytes: Bytes) : Option[Long] = {
+		var i = 0L
+		while(i < bytes.length - 1024) {
+			val self = new DirRec( bytes.getFrom(i) )
+			if(self.nameIsDot && self.inodeNum==2 && self.next>0 && self.next<20) {
+				val parent = new DirRec( bytes.getFrom(i + self.next) )
+				if(parent.nameIsDotDot && parent.inodeNum == 2) {
+					return(Some(i))
+				}
+			}
+			i+=1
+		}
+		None
+	}
 
-			if( d1.inodeNum == d2.inodeNum ) {
-				debug("[DirF]\t"+d1 )
-				debug("[DirF]\t"+d2 )
+	def findRootdir(fs: FileSystem) : Option[Block] = {
+		val bytes = fs.bytes
+		find(fs, (block, self, parent) => {
+
+			if( self.inodeNum == parent.inodeNum ) {
+				debug("[DirF]\t"+self )
+				debug("[DirF]\t"+parent )
 				true
 			} else
 				false
@@ -50,6 +66,7 @@ object Directory {
 		val dir = new Directory(inode, name)
 		debug("[dir "+name+"]\tStarting at inode: "+inode)
 		var valid = true
+		var next = List[ () => Unit]()
 
 		for( block <- inode.blocks ) {
 			if(valid) {
@@ -63,14 +80,18 @@ object Directory {
 						val child = inode.fs.inode(rec.inodeNum)
 						debug("[dir "+name+"]\t child inode:"+child)
 
-						if(child.isDir && child.blockCount < 10) {
-							debug("[dir "+name+"]\trecursing into child dir "+rec.name)
-							dir.subdirs = Directory(child, rec.name) :: dir.subdirs
-						}
-
 						if(child.isFile) {
 							debug("[dir "+name+"]\tAdding file "+rec.name)
 							dir.files = new FsFile(child, rec.name) :: dir.files
+						}
+
+
+						if(child.isDir && child.blockCount < 100) {
+							debug("[dir "+name+"]\t defering recurse into "+rec.name)
+							next = ( () => {
+								debug("[dir "+name+"]\trecursing into child dir "+rec.name)
+								dir.subdirs = Directory(child, rec.name) :: dir.subdirs
+							} ) :: next							
 						}
 
 
@@ -83,6 +104,7 @@ object Directory {
 						i = i + rec.next
 					
 				}
+				for(down <- next) { down() }
 			}
 		}
 		dir 
