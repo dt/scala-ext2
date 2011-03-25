@@ -1,6 +1,6 @@
 # Scala Ext2 FS Reader
 
-Ext2 reader and recovery in Scala
+Ext2/3 reader and recovery in Scala
 
 # Dependencies
 	* sbt
@@ -9,24 +9,29 @@ Ext2 reader and recovery in Scala
 The first argument to Reader must be the filename of ext image.
 Additional options, of the form option=value, may be passed as subsequent arguments
 
-	> sbt reload update compile
+	> sbt update compile
 	> sbt
-	> sbt> run ext2fs.dd
+	> sbt> run ext2fs.dd metaimage=ext2meta.dd
 
 Option examples:
-	sbt> run ext3fs.dd grouppad=261 debug=true
+	sbt> run ext3fs.dd debug=true
 	sbt> run ext2fs.dd metaimage=clean2fs.dd skipjournal=true
 	sbt> run ext2fs.dd finddeleted=true
 
 # Options
 
-* debug=<boolean> enables verbose output
-* blocksize=<num> manually override the blocksize
 * metaimage=<filename> uses filename as a source of metadata (gdts and superblocks)
-* grouppad=<num> offset block numbers in group descriptors by <num>
-* skipjournal=<boolean> do not try to read/dump the journal
-* dumpfiles=<boolean> dump files to disk
-* finddeleted=<boolean> attempt to recovered deleted files
+* debug=<boolean>				enables verbose output
+* blocksize=<num>				manually override the blocksize
+*	overrideSB=<pos>			override location of superblock
+*	skipjournal=true			do not attempt to interact with the journal
+*	dumpjournal=true			export the journal to a file
+*	parsejournal=true			parse the journal to read events
+*	finddeleted=true			try to find deleted files
+*	dumpfiles=true				dump the found files to disk
+*	loadtree=false				do not try to load the directory tree
+*	extractdirtree=true		try to extract directory tree without reading directories
+*	guessblocksize=true		attempt to guess block size
 
 # Other Tools
 Obviously, refer to documentation or man pages, but these could be helpful:
