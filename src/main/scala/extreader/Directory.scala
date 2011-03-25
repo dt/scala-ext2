@@ -87,21 +87,34 @@ object Directory {
 
 
 						if(child.isDir && child.blockCount < 100) {
-							debug("[dir "+name+"]\t defering recurse into "+rec.name)
+							debug("[dir "+name+"]\t deferring recurse into "+rec.name)
 							next = ( () => {
 								debug("[dir "+name+"]\trecursing into child dir "+rec.name)
 								dir.subdirs = Directory(child, rec.name) :: dir.subdirs
 							} ) :: next							
 						}
 
-
 					}
 
 					if(rec.next == 0) {
 						valid = false
 						debug("[dir "+name+"]\tlast record")
-					} else
-						i = i + rec.next
+					} else {
+						val skip = (rec.next - DirRec.minLength - rec.nameLength)
+						if (skip >= DirRec.minLength) {
+							val potential = new DirRec (block.getFrom(i+rec.nameLength+DirRec.minLength+(3-((i-1)%4))))
+							if (potential.appearsValid) {
+								println("[dir] Possible deleted file: " + skip + " bytes between directory entries.")
+								println("\tinode: " + potential.inodeNum)
+								println("\tlength: " + potential.next)
+								println("\tnameLength: " + potential.nameLength)
+								println("\tfiletype: " + potential.ftype)
+								println("\tname: " + potential.name)
+							}
+						}// else {
+							i = i + rec.next
+						//}
+					}
 					
 				}
 				for(down <- next) { down() }
@@ -132,6 +145,11 @@ class DirRec(val bytes : Bytes) {
 		for (i <- 0 until nameLength ) //note: 'until', not 'to'
 			sb append bytes.get1(8+i)
 		sb toString
+	}
+
+	def appearsValid = {
+		inodeNum > 0 &&
+		ftype <= 7
 	}
 
 	def length = { 
