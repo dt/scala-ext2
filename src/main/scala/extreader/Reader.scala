@@ -16,14 +16,15 @@ object Reader {
 			System.exit(-1)
 		}
 
-		val Assign = "(.*)=(.*)".r
-
 		val image = new File(args(0))
 
+		// regex for matching assignments for options
+		val Assign = "(.*)=(.*)".r
+
+		// default options
 		var cleanImg = Option.empty[String] 
 		var forceBlocksize = Option.empty[Int]
 		var overrideSB = Option.empty[Long]
-		var groupPad = Option.empty[Int] 
 		var skipJournal = false
 		var dumpJournal = false
 		var parseJournal = false
@@ -33,6 +34,7 @@ object Reader {
 		var loadTree = true
 		var guessBlockSize = false
 
+		// process arguments one by one
 		for(i <- 1 until args.length) {
 			args(i) match {
 				case Assign(a,v) => {
@@ -40,7 +42,6 @@ object Reader {
 						case "metaimage" => { cleanImg = Some(v) } 
 						case "overrideSB" => { overrideSB = Some(v.toLong) }
 						case "debug" => { extreader.showDebug = v.toBoolean }
-						case "grouppad" => { groupPad = Some(v.toInt)}
 						case "blocksize" => {
 							val bs = v.toInt
 							if((bs % 1024) != 0)
@@ -68,8 +69,10 @@ object Reader {
 		
 		debug("Debug output enabled...")
 
+		// load the image file into our byte wrapper
 		val bytes = Bytes fromFile image
 
+		// load alternate bytes if specified
 		val cleanBytes = cleanImg.map{ cleanFile => {
 			println("Loading alternate metadata image: "+cleanFile) 
 			Bytes fromFile (new File(cleanFile)) 
@@ -126,10 +129,11 @@ object Reader {
 			return 0;
 		}
 
-		val sb = superblock.get
+		val sb = superblock.get // it's not empty (we checked above) so de-ref now
+
 		println("Loading filesystem...")
 		val fs = new FileSystem(bytes, sb, cleanBytes)
-		groupPad.map{ x => fs.groupDescPad = x }
+
 		forceBlocksize.map{ x => fs.blockSize = x }
 
 		debug("File system info:")
@@ -177,10 +181,6 @@ object Reader {
 					return 0;
 			} else println("Journal not enabled in superblock.")
 		} else println("Skipping journal")
-
-		//val rootPos = DirectoryFinder findRootdir fs 
-
-		//debug(rootPos)
 
 		var rawDirTree = Option.empty[InodeParents]
 
@@ -232,7 +232,8 @@ object Reader {
 		}
 	}
 	
-
+	// manually attempts to build a tree of inode/directory relationships
+	// 	directory contents follows a known format, so use those to map inodes
 	def extractDirInodeTree(fs:FileSystem) = {
 		val dirs = collection.mutable.Map[Long, List[Long]]()
 		val inode2block = collection.mutable.Map[Long, Block]()
